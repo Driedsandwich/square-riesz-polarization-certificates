@@ -31,7 +31,8 @@ jobs:
           set -euo pipefail
           test -f .publication-trigger
           test "$(find .publication-payload -maxdepth 1 -type f -name 'part.*' | wc -l | tr -d ' ')" = '11'
-          cat .publication-payload/part.* > "$RUNNER_TEMP/repo.tar.xz.b64"
+          for n in {01..10}; do test -f ".publication-payload/part.${n}"; done
+          cat .publication-payload/part.{01..10} > "$RUNNER_TEMP/repo.tar.xz.b64"
           echo "${EXPECTED_BASE64_SHA256}  $RUNNER_TEMP/repo.tar.xz.b64" | sha256sum -c -
           base64 -d "$RUNNER_TEMP/repo.tar.xz.b64" > "$RUNNER_TEMP/repo.tar.xz"
           echo "${EXPECTED_ARCHIVE_SHA256}  $RUNNER_TEMP/repo.tar.xz" | sha256sum -c -
