@@ -1,0 +1,71 @@
+name: publication-label-bootstrap
+
+on:
+  label:
+    types: [created]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publication-bootstrap
+  cancel-in-progress: false
+
+env:
+  EXPECTED_BASE64_SHA256: beeedcd3299392b7d6fe26fe58d7811aefb3246ba660cf372f1a2eda8f1a58ac
+  EXPECTED_ARCHIVE_SHA256: 9a50a8e2d2c218b7f4c1f3cdba5ecfddf11bca6363f7c84f3c7fc36da7602331
+  EXPECTED_FILE_COUNT: '564'
+
+jobs:
+  publish-canonical-tree:
+    if: github.event.label.name == 'publication-bootstrap-trigger'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout bootstrap state
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reassemble and verify payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f .publication-trigger
+          cat .publication-payload/part.* > "$RUNNER_TEMP/repo.tar.xz.b64"
+          echo "${EXPECTED_BASE64_SHA256}  $RUNNER_TEMP/repo.tar.xz.b64" | sha256sum -c -
+          base64 -d "$RUNNER_TEMP/repo.tar.xz.b64" > "$RUNNER_TEMP/repo.tar.xz"
+          echo "${EXPECTED_ARCHIVE_SHA256}  $RUNNER_TEMP/repo.tar.xz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/finalized-repo"
+          tar -xJf "$RUNNER_TEMP/repo.tar.xz" -C "$RUNNER_TEMP/finalized-repo"
+          actual_count="$(find "$RUNNER_TEMP/finalized-repo" -type f | wc -l | tr -d ' ')"
+          test "$actual_count" = "$EXPECTED_FILE_COUNT"
+
+      - name: Verify finalized repository before commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/finalized-repo"
+          python3 scripts/verify_manifest.py
+          python3 scripts/check_release.py
+          test ! -e operator
+          test ! -e .publication-payload
+          test ! -e .publication-trigger
+          test ! -e .github/workflows/publication-bootstrap.yml
+          test ! -e .github/workflows/publication-label-bootstrap.yml
+
+      - name: Replace bootstrap tree and push one canonical commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a "$RUNNER_TEMP/finalized-repo/." .
+          actual_count="$(find . -type f ! -path './.git/*' | wc -l | tr -d ' ')"
+          test "$actual_count" = "$EXPECTED_FILE_COUNT"
+          python3 scripts/verify_manifest.py
+          python3 scripts/check_release.py
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'release: publish v1.0.0 certified lower-bound corpus'
+          git push origin HEAD:main
