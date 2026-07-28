@@ -6,9 +6,15 @@ on:
     paths:
       - '.publication-trigger'
   workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
 
 permissions:
   contents: write
+
+concurrency:
+  group: publication-bootstrap
+  cancel-in-progress: false
 
 env:
   EXPECTED_BASE64_SHA256: beeedcd3299392b7d6fe26fe58d7811aefb3246ba660cf372f1a2eda8f1a58ac
@@ -24,6 +30,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Require active trigger
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f .publication-trigger
 
       - name: Reassemble and verify payload
         shell: bash
