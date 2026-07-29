@@ -1,5 +1,25 @@
 # Certified lower bounds for unit-square Riesz 2-polarization
 
+## Origin and problem statement
+
+This project concerns Erich Friedman's **“Maximizing Minimum Light Intensity”** problem, published at [Erich's Packing Center](https://erich-friedman.github.io/packing/light/).
+
+Place \(n\) unit point lights at positions \(X=\{x_1,\ldots,x_n\}\subset[0,1]^2\) in the unit square. The illumination at a point \(p\) is the inverse-square sum
+
+$$
+U_X(p)=\sum_{i=1}^n \frac{1}{\|p-x_i\|^2},
+$$
+
+and the fixed-configuration minimum intensity is
+
+$$
+I(X)=\min_{p\in[0,1]^2} U_X(p).
+$$
+
+The original max-min problem asks for the largest possible value of \(I(X)\) over all \(n\)-point configurations \(X\). Friedman's page records best-known numerical configurations and displayed lower-bound values for this problem.
+
+This repository has a narrower, proof-oriented role: it supplies exact-rational lower-bound certificates for specified **fixed finite-decimal configurations**. Certifying a fixed configuration does not prove that the configuration is globally optimal among all placements, and a certified value is not automatically an official record-board value. This repository is independent and is not affiliated with or endorsed by Erich Friedman.
+
 ## Canonical publication
 
 The canonical repository and `v1.0.0` Release URLs are recorded in `PUBLICATION_STATUS.md` during publication finalization.
@@ -53,11 +73,13 @@ The release reproduces and verifies the certificates, not the original explorato
 - `evidence/saved-replays/`: canonical saved replay logs.
 - `evidence/full-cleanroom-replay/`: clean-room replay logs for all 88 public certifier scripts.
 
-## External record-board context
+## Relationship to the original record board
 
-The original record board is maintained by Erich Friedman. A browser screenshot supplied by the researcher on 2026-07-28 showed the board through `n=36`, with `n=31..36` credited to “Satoshi Kishimoto and GPT-5.6 Sol Pro in July 2026.” The displayed values are earlier submitted configurations; stronger internal certified configurations exist for many `n` and are clearly separated in the result table.
+The original “Maximizing Minimum Light Intensity” board is maintained by Erich Friedman. Some configurations and lower bounds for `n<=36` were communicated to the maintainer, and the public board may display earlier submitted values.
 
-The maintainer requested that direct submission processing stop at `n=36`. Configurations for `n>36` in this repository are independent, unsubmitted extensions. This project is not affiliated with or endorsed by Erich Friedman or OpenAI.
+The latest certified values in this repository can exceed values that were previously submitted or displayed. The result table and `docs/supersession-map.md` keep submitted, observed-board, and current repository values distinct.
+
+Configurations for `n>36` are independent, unsubmitted extensions. In every range, `CERTIFIED` means that the exact fixed finite-decimal configuration has the stated continuous lower bound; it does **not** mean that the value is an official record or that the configuration is globally optimal.
 
 ## Attribution and provenance
 
