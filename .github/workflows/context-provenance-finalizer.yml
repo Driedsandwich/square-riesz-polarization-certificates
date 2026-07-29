@@ -1,0 +1,67 @@
+name: context-provenance-finalizer
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  finalize:
+    if: github.head_ref == 'context-and-provenance-hardening' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: context-and-provenance-hardening
+          fetch-depth: 0
+
+      - name: Create issue labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          create_label() {
+            local name="$1" color="$2" description="$3"
+            if gh api "repos/${GITHUB_REPOSITORY}/labels/${name}" >/dev/null 2>&1; then
+              echo "label exists: ${name}"
+            else
+              gh api --method POST "repos/${GITHUB_REPOSITORY}/labels" \
+                -f name="$name" -f color="$color" -f description="$description"
+            fi
+          }
+          create_label reproduction 1d76db "Certificate or manifest reproduction problem"
+          create_label data-correction fbca04 "Coordinate, result-table, citation, or documentation correction"
+
+      - name: Regenerate manifest and validate
+        run: |
+          set -euo pipefail
+          rm .github/workflows/context-provenance-finalizer.yml
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          root = Path('.')
+          lines = []
+          for path in sorted(
+              (p for p in root.rglob('*') if p.is_file() and '.git' not in p.parts and p.name != 'SHA256SUMS'),
+              key=lambda p: p.as_posix(),
+          ):
+              lines.append(f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.as_posix()}")
+          Path('SHA256SUMS').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+          PY
+          python scripts/verify_manifest.py
+          python scripts/check_release.py
+          python scripts/verify_all.py --quick --jobs 2
+
+      - name: Commit finalized branch
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add README.md docs/references.md NOTICE.md SHA256SUMS .github/workflows/context-provenance-finalizer.yml
+          git diff --cached --quiet && exit 0
+          git commit -m 'docs: finalize context and provenance hardening'
+          git push origin HEAD:context-and-provenance-hardening
