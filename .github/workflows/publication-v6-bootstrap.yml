@@ -30,10 +30,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for n in {00..12}; do test -f ".publication-payload-v4/part.${n}"; done
-          cat .publication-payload-v4/part.{00..12} > "$RUNNER_TEMP/repo.tar.xz.b64"
-          echo "${EXPECTED_BASE64_SHA256}  $RUNNER_TEMP/repo.tar.xz.b64" | sha256sum -c -
-          base64 -d "$RUNNER_TEMP/repo.tar.xz.b64" > "$RUNNER_TEMP/repo.tar.xz"
+          normalized="$RUNNER_TEMP/repo.tar.xz.b64"
+          : > "$normalized"
+          for n in {00..12}; do
+            part=".publication-payload-v4/part.${n}"
+            test -f "$part"
+            tr -d '\r\n\t ' < "$part" >> "$normalized"
+          done
+          echo "${EXPECTED_BASE64_SHA256}  $normalized" | sha256sum -c -
+          base64 -d "$normalized" > "$RUNNER_TEMP/repo.tar.xz"
           echo "${EXPECTED_ARCHIVE_SHA256}  $RUNNER_TEMP/repo.tar.xz" | sha256sum -c -
           mkdir -p "$RUNNER_TEMP/finalized-repo"
           tar -xJf "$RUNNER_TEMP/repo.tar.xz" -C "$RUNNER_TEMP/finalized-repo"
