@@ -1,9 +1,10 @@
 cff-version: 1.2.0
-message: "If you use these configurations or certifiers, please cite this software release."
+message: "If you use the software certifiers, please cite this software release. Code is BSD-3-Clause; original data and documentation are CC BY 4.0 as described in the repository licensing files."
 title: "Certified lower bounds for unit-square Riesz 2-polarization"
 type: software
 version: "1.0.0"
-date-released: "2026-07-28"
+date-released: "2026-07-29"
+commit: "2f01c00693a1304b063077238d4e86ba7fae9744"
 authors:
   - family-names: "Kishimoto"
     given-names: "Satoshi"
