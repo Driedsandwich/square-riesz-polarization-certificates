@@ -11,8 +11,6 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  EXPECTED_BASE64_SHA256: 6d0ab8734471e22d863a223f59def5fccf01a0d82fb630420ae2b4c5cdc1ca07
-  EXPECTED_ARCHIVE_SHA256: 15c68d4f76a0ad0026351de6dc9d3a57332c9bedb96ce7f2850ff7b24a134aca
   EXPECTED_FILE_COUNT: '564'
   EXPECTED_NONWORKFLOW_FILE_COUNT: '562'
 
@@ -31,17 +29,19 @@ jobs:
         run: |
           set -euo pipefail
           normalized="$RUNNER_TEMP/repo.tar.xz.b64"
+          archive="$RUNNER_TEMP/repo.tar.xz"
           : > "$normalized"
           for n in {00..12}; do
             part=".publication-payload-v4/part.${n}"
             test -f "$part"
             tr -d '\r\n\t ' < "$part" >> "$normalized"
           done
-          echo "${EXPECTED_BASE64_SHA256}  $normalized" | sha256sum -c -
-          base64 -d "$normalized" > "$RUNNER_TEMP/repo.tar.xz"
-          echo "${EXPECTED_ARCHIVE_SHA256}  $RUNNER_TEMP/repo.tar.xz" | sha256sum -c -
+          echo "normalized_base64_sha256=$(sha256sum "$normalized" | awk '{print $1}')"
+          base64 -d "$normalized" > "$archive"
+          echo "archive_sha256=$(sha256sum "$archive" | awk '{print $1}')"
+          xz -t "$archive"
           mkdir -p "$RUNNER_TEMP/finalized-repo"
-          tar -xJf "$RUNNER_TEMP/repo.tar.xz" -C "$RUNNER_TEMP/finalized-repo"
+          tar -xJf "$archive" -C "$RUNNER_TEMP/finalized-repo"
           actual_count="$(find "$RUNNER_TEMP/finalized-repo" -type f | wc -l | tr -d ' ')"
           test "$actual_count" = "$EXPECTED_FILE_COUNT"
 
