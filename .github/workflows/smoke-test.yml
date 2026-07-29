@@ -1,13 +1,25 @@
 name: smoke-test
 
 on:
-  workflow_dispatch:
+  push:
+  pull_request:
 
 permissions:
   contents: read
+
+env:
+  PYTHONHASHSEED: "0"
 
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Temporary audit-remediation branch state; final smoke-test workflow will be restored before merge."
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python scripts/verify_manifest.py
+      - run: python scripts/check_release.py
+      - run: python scripts/verify_all.py --quick --jobs 2
