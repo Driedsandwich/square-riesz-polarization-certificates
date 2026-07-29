@@ -1,0 +1,146 @@
+name: release-v1-operator
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: release-v1-operator
+  cancel-in-progress: false
+
+env:
+  EXPECTED_CANONICAL_COMMIT: 440dc4dcb96d85ec43bce2994a092e244cd6d018
+  ASSET_SOURCE_COMMIT: abea1ae8c0fa5dc2de49e30ea458b28d6de9cbfc
+  ASSET_SOURCE_PATH: .publication-payload-v7/square-riesz-polarization-certificates-v1.0.0.zip
+  ASSET_NAME: square-riesz-polarization-certificates-v1.0.0.zip
+  ASSET_SHA256: 3efed92c6227594f04374b6b3d795c1c8f5d0fc6942734678559e93c9220351b
+
+jobs:
+  publish-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout private main with full history
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Cancel obsolete queued bootstrap runs when possible
+        shell: bash
+        run: |
+          set -euo pipefail
+          ids="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/runs?status=queued&per_page=100" --jq '.workflow_runs[] | select(.name == "publication-v7-upload-bootstrap") | .id' || true)"
+          for id in $ids; do
+            echo "cancelling obsolete run ${id}"
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/${id}/cancel" || true
+          done
+
+      - name: Verify canonical tree and create final main commit
+        id: finalize
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse "${EXPECTED_CANONICAL_COMMIT}^{tree}")" != ""
+          git rm .github/workflows/release-v1-operator.yml
+          python3 scripts/verify_manifest.py
+          python3 scripts/check_release.py
+          canonical_tree="$(git rev-parse "${EXPECTED_CANONICAL_COMMIT}^{tree}")"
+          staged_tree="$(git write-tree)"
+          echo "canonical_tree=${canonical_tree}"
+          echo "staged_tree=${staged_tree}"
+          test "$staged_tree" = "$canonical_tree"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore: finalize v1.0.0 release state'
+          final_sha="$(git rev-parse HEAD)"
+          git push origin HEAD:main
+          remote_sha="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test "$remote_sha" = "$final_sha"
+          echo "final_sha=${final_sha}" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare and verify release assets
+        id: assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          asset="$RUNNER_TEMP/$ASSET_NAME"
+          checksum="$RUNNER_TEMP/${ASSET_NAME}.sha256"
+          git show "${ASSET_SOURCE_COMMIT}:${ASSET_SOURCE_PATH}" > "$asset"
+          echo "${ASSET_SHA256}  ${ASSET_NAME}" > "$checksum"
+          echo "${ASSET_SHA256}  ${asset}" | sha256sum -c -
+          test "$(wc -c < "$asset" | tr -d ' ')" = '610729'
+          test "$(wc -c < "$checksum" | tr -d ' ')" = '116'
+          echo "asset=${asset}" >> "$GITHUB_OUTPUT"
+          echo "checksum=${checksum}" >> "$GITHUB_OUTPUT"
+
+      - name: Create and verify v1.0.0 Release
+        shell: bash
+        run: |
+          set -euo pipefail
+          final_sha='${{ steps.finalize.outputs.final_sha }}'
+          if git ls-remote --exit-code --tags origin refs/tags/v1.0.0 >/dev/null 2>&1; then
+            echo 'ERROR: v1.0.0 tag already exists'
+            exit 1
+          fi
+          if gh release view v1.0.0 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo 'ERROR: v1.0.0 Release already exists'
+            exit 1
+          fi
+          gh release create v1.0.0 \
+            '${{ steps.assets.outputs.asset }}#Canonical source and certificate corpus' \
+            '${{ steps.assets.outputs.checksum }}#SHA-256 checksum' \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$final_sha" \
+            --title 'v1.0.0 — Certified lower-bound corpus' \
+            --notes-file RELEASE_NOTES_v1.0.0.md
+          tag_sha="$(git ls-remote origin refs/tags/v1.0.0 | awk '{print $1}')"
+          test "$tag_sha" = "$final_sha"
+          verify_dir="$RUNNER_TEMP/release-download"
+          mkdir -p "$verify_dir"
+          gh release download v1.0.0 --repo "$GITHUB_REPOSITORY" --dir "$verify_dir"
+          cd "$verify_dir"
+          test -f "$ASSET_NAME"
+          test -f "${ASSET_NAME}.sha256"
+          echo "${ASSET_SHA256}  ${ASSET_NAME}" | sha256sum -c -
+          test "$(find . -maxdepth 1 -type f | wc -l | tr -d ' ')" = '2'
+          gh release view v1.0.0 --repo "$GITHUB_REPOSITORY" --json url,tagName,isDraft,isPrerelease,targetCommitish,assets | tee release.json
+          test "$(jq -r '.tagName' release.json)" = 'v1.0.0'
+          test "$(jq -r '.isDraft' release.json)" = 'false'
+          test "$(jq -r '.isPrerelease' release.json)" = 'false'
+          test "$(jq '.assets | length' release.json)" = '2'
+
+      - name: Attempt approved public visibility change
+        id: visibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          before="$(gh api "repos/${GITHUB_REPOSITORY}" --jq '.visibility')"
+          echo "visibility_before=${before}"
+          if gh api --method PATCH "repos/${GITHUB_REPOSITORY}" -F private=false > "$RUNNER_TEMP/visibility.json" 2> "$RUNNER_TEMP/visibility.err"; then
+            after="$(gh api "repos/${GITHUB_REPOSITORY}" --jq '.visibility')"
+            echo "visibility_after=${after}"
+            test "$after" = 'public'
+            echo 'public=true' >> "$GITHUB_OUTPUT"
+          else
+            cat "$RUNNER_TEMP/visibility.err"
+            after="$(gh api "repos/${GITHUB_REPOSITORY}" --jq '.visibility')"
+            test "$after" = 'private'
+            echo 'public=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publication summary
+        shell: bash
+        run: |
+          {
+            echo '## v1.0.0 publication result'
+            echo "- final main: ${{ steps.finalize.outputs.final_sha }}"
+            echo '- tag: v1.0.0'
+            echo '- Release assets: 2/2 verified'
+            echo "- public visibility: ${{ steps.visibility.outputs.public }}"
+          } >> "$GITHUB_STEP_SUMMARY"
