@@ -1,0 +1,49 @@
+name: audit-remediation-finalize
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: audit-remediation-finalize
+  cancel-in-progress: false
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: audit-remediation-v1
+          fetch-depth: 0
+      - name: Regenerate manifest and validate remediation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/audit-remediation-finalize.yml
+          find . -type f ! -path './.git/*' ! -name SHA256SUMS -print0 \
+            | sort -z \
+            | xargs -0 sha256sum \
+            | sed 's#  \./#  #' > SHA256SUMS
+          test "$(wc -l < SHA256SUMS | tr -d ' ')" = "571"
+          python scripts/verify_manifest.py
+          python scripts/check_release.py
+          python scripts/verify_all.py --quick --jobs 2
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          for p in Path('.').rglob('*.json'):
+              json.loads(p.read_text(encoding='utf-8'))
+          print('json_parse=PASS')
+          PY
+      - name: Commit finalized remediation branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'chore: finalize post-publication audit remediation'
+          git push origin HEAD:audit-remediation-v1
