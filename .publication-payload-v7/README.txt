@@ -1,0 +1,1 @@
+Binary payload staging is being prepared via Git blob API. Do not run legacy publication workflows.
