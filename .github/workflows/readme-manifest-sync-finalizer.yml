@@ -1,0 +1,61 @@
+name: readme-manifest-sync-finalizer
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.head_ref == 'readme-manifest-sync'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: readme-manifest-sync
+          fetch-depth: 0
+
+      - name: Regenerate manifest and validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/readme-manifest-sync-finalizer.yml
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+
+          root = Path('.')
+          excluded = {'SHA256SUMS', 'PUBLICATION_AUDIT.json'}
+          lines = []
+          for path in sorted(root.rglob('*')):
+              if not path.is_file():
+                  continue
+              rel = path.relative_to(root).as_posix()
+              if '.git' in path.parts or rel in excluded:
+                  continue
+              digest = hashlib.sha256(path.read_bytes()).hexdigest()
+              lines.append(f'{digest}  {rel}')
+          Path('SHA256SUMS').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+          print(f'manifest_items={len(lines)}')
+          PY
+          python scripts/verify_manifest.py
+          python scripts/check_release.py
+          python scripts/verify_all.py --quick --jobs 2
+
+      - name: Commit synchronized manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add SHA256SUMS .github/workflows/readme-manifest-sync-finalizer.yml
+          git commit -m 'chore: sync manifest after README attribution update'
+          git push origin HEAD:readme-manifest-sync
