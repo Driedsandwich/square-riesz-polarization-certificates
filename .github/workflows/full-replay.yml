@@ -1,0 +1,20 @@
+name: full-certificate-replay
+on:
+  workflow_dispatch:
+jobs:
+  verify-all:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python scripts/verify_manifest.py
+      - run: python scripts/check_release.py
+      - run: python scripts/verify_all.py --all --jobs 2 --output-dir ci-full-replay
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: full-replay-logs
+          path: ci-full-replay
