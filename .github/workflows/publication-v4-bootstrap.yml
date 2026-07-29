@@ -1,0 +1,92 @@
+name: publication-v4-bootstrap
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publication-bootstrap-v4
+  cancel-in-progress: false
+
+env:
+  EXPECTED_BASE64_SHA256: 6d0ab8734471e22d863a223f59def5fccf01a0d82fb630420ae2b4c5cdc1ca07
+  EXPECTED_ARCHIVE_SHA256: 15c68d4f76a0ad0026351de6dc9d3a57332c9bedb96ce7f2850ff7b24a134aca
+  EXPECTED_FILE_COUNT: '564'
+
+jobs:
+  publish-canonical-tree:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout private v4 staging state
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reassemble and verify canonical v4 payload
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for n in $(seq -w 0 12); do
+            test -f ".publication-payload-v4/part.${n}"
+          done
+          test "$(find .publication-payload-v4 -maxdepth 1 -type f -name 'part.*' | wc -l | tr -d ' ')" = '13'
+
+          raw_b64="$RUNNER_TEMP/repo.tar.xz.raw.b64"
+          normalized_b64="$RUNNER_TEMP/repo.tar.xz.b64"
+          archive="$RUNNER_TEMP/repo.tar.xz"
+
+          cat .publication-payload-v4/part.{00..12} > "$raw_b64"
+          tr -d '\r\n\t ' < "$raw_b64" > "$normalized_b64"
+
+          echo "${EXPECTED_BASE64_SHA256}  ${normalized_b64}" | sha256sum -c -
+          base64 --decode "$normalized_b64" > "$archive"
+          echo "${EXPECTED_ARCHIVE_SHA256}  ${archive}" | sha256sum -c -
+
+          mkdir -p "$RUNNER_TEMP/finalized-repo"
+          tar -xJf "$archive" -C "$RUNNER_TEMP/finalized-repo"
+
+          actual_count="$(find "$RUNNER_TEMP/finalized-repo" -type f | wc -l | tr -d ' ')"
+          test "$actual_count" = "$EXPECTED_FILE_COUNT"
+
+      - name: Verify finalized repository before commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/finalized-repo"
+
+          python3 scripts/verify_manifest.py
+          python3 scripts/check_release.py
+
+          test ! -e operator
+          test ! -e .publication-payload
+          test ! -e .publication-payload-v4
+          test ! -e .publication-trigger
+          test ! -e .github/workflows/publication-bootstrap.yml
+          test ! -e .github/workflows/publication-label-bootstrap.yml
+          test ! -e .github/workflows/publication-create-bootstrap.yml
+          test ! -e .github/workflows/publication-manual-bootstrap.yml
+          test ! -e .github/workflows/publication-v4-bootstrap.yml
+
+      - name: Replace staging tree and push one canonical commit
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a "$RUNNER_TEMP/finalized-repo/." .
+
+          actual_count="$(find . -type f ! -path './.git/*' | wc -l | tr -d ' ')"
+          test "$actual_count" = "$EXPECTED_FILE_COUNT"
+          python3 scripts/verify_manifest.py
+          python3 scripts/check_release.py
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'release: publish v1.0.0 certified lower-bound corpus'
+          git push origin HEAD:main
+          git push origin --delete publication-bootstrap-trigger || true
