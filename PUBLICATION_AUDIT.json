@@ -21,5 +21,10 @@
   },
   "status": "PASS",
   "repository_url": "https://github.com/Driedsandwich/square-riesz-polarization-certificates",
-  "release_url": "https://github.com/Driedsandwich/square-riesz-polarization-certificates/releases/tag/v1.0.0"
+  "release_url": "https://github.com/Driedsandwich/square-riesz-polarization-certificates/releases/tag/v1.0.0",
+  "excluded_files": [
+    "PUBLICATION_AUDIT.json",
+    "SHA256SUMS"
+  ],
+  "exclusion_reason": "The audit report cannot hash itself, and SHA256SUMS is the manifest being generated."
 }
