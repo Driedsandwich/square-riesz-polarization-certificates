@@ -81,6 +81,8 @@ The latest certified values in this repository can exceed values that were previ
 
 Configurations for `n>36` are independent, unsubmitted extensions. In every range, `CERTIFIED` means that the exact fixed finite-decimal configuration has the stated continuous lower bound; it does **not** mean that the value is an official record or that the configuration is globally optimal.
 
+Direct submissions to the original record board stopped at `n=36` following the maintainer's request to pause further batches while the existing submissions were processed. The current repository extends independently through `n=52`. That endpoint is the scope boundary of the internally audited public corpus, not a mathematical cutoff; configurations beyond `n=52` may still be searched for and certified.
+
 ## Attribution and provenance
 
 Candidate generation and certificate construction were performed using GPT-5.6 Sol Pro in ChatGPT browser mode. Driedsandwich supervised the research, coordinated audits and external communication, and prepared this release. The initial `n=14,15` package was additionally replayed with Codex under the submitter's supervision.
