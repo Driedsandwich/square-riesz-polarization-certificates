@@ -1,0 +1,15 @@
+{
+  "n": 45,
+  "method": "spectral",
+  "repo_relative_script": "certifiers/n45/spectral.py",
+  "script_sha256": "fb7fda0e8003bfa4e03e23fe97b90fba41800ea180746756d34adddd2bd47782",
+  "return_code": 0,
+  "timed_out": false,
+  "elapsed_seconds": 22.68341,
+  "status": "CERTIFIED",
+  "splits": "1125",
+  "maximum_depth": "27",
+  "minimum_leaf_lower_bound": "",
+  "stdout_log": "logs/n45_spectral.stdout.txt",
+  "stderr_log": "logs/n45_spectral.stderr.txt"
+}

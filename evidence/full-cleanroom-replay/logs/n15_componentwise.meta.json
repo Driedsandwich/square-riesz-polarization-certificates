@@ -1,0 +1,15 @@
+{
+  "n": 15,
+  "method": "componentwise",
+  "repo_relative_script": "certifiers/n15/componentwise.py",
+  "script_sha256": "1dff830ce19f17d876047da0a8954ff29ca11f5bfb71cae9ebace2a258f66db9",
+  "return_code": 0,
+  "timed_out": false,
+  "elapsed_seconds": 35.296514,
+  "status": "CERTIFIED",
+  "splits": "2941",
+  "maximum_depth": "37",
+  "minimum_leaf_lower_bound": "",
+  "stdout_log": "logs/n15_componentwise.stdout.txt",
+  "stderr_log": "logs/n15_componentwise.stderr.txt"
+}

@@ -1,0 +1,3 @@
+# Only needed for optional numerical analysis/local-minimum tooling, not for exact certifiers.
+numpy==2.3.5
+scipy==1.17.0

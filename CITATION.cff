@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use these configurations or certifiers, please cite this software release."
+title: "Certified lower bounds for unit-square Riesz 2-polarization"
+type: software
+version: "1.0.0"
+date-released: "2026-07-28"
+authors:
+  - family-names: "Kishimoto"
+    given-names: "Satoshi"
+abstract: "Exact-rational branch-and-bound certificates for fixed configurations in the unit-square Riesz s=2 polarization problem. Candidate generation and certificate construction used GPT-5.6 Sol Pro under human supervision."
+keywords:
+  - Riesz polarization
+  - geometric optimization
+  - exact rational arithmetic
+  - branch and bound
+license: BSD-3-Clause
+repository-code: "https://github.com/Driedsandwich/square-riesz-polarization-certificates"
+url: "https://github.com/Driedsandwich/square-riesz-polarization-certificates/releases/tag/v1.0.0"

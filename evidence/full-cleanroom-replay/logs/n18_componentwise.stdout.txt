@@ -1,0 +1,12 @@
+status: CERTIFIED
+method: componentwise_hessian_intervals_exact_symmetry_quarter_square
+target_exact: 368351/2500
+target_decimal: 147.3404
+splits: 533
+leaf_count: 534
+maximum_depth: 25
+minimum_leaf_lower_bound_decimal: 147.3404086167208143778882701005374167077165751666574970732804074372664
+witness_value_upper_bound_decimal: 147.3404290637407826582944090544740390291630269181014741302042218693484
+rigorous_interval_for_true_minimum:
+  lower: 147.3404
+  upper: 147.3404290637407826582944090544740390291630269181014741302042218693484

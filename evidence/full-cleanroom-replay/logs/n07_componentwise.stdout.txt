@@ -1,0 +1,12 @@
+status: CERTIFIED
+method: componentwise_hessian_intervals_full_unit_square
+target_exact: 179549/5000
+target_decimal: 35.9098
+splits: 489
+leaf_count: 490
+maximum_depth: 22
+minimum_leaf_lower_bound_decimal: 35.90980982743248302746665545034470985456402630791954621367279118102938
+corner_value_upper_bound_decimal: 35.90989421275111691174209144636219718107963706617253636521464259955599
+rigorous_interval_for_true_minimum:
+  lower: 35.9098
+  upper: 35.90989421275111691174209144636219718107963706617253636521464259955599
