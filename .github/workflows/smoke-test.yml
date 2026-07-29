@@ -1,13 +1,25 @@
 name: smoke-test
-on: [push, pull_request]
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONHASHSEED: "0"
+
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
         with:
-          python-version: '3.13'
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
       - run: python scripts/verify_manifest.py
       - run: python scripts/check_release.py
       - run: python scripts/verify_all.py --quick --jobs 2

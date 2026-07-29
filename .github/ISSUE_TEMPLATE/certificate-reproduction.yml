@@ -1,0 +1,50 @@
+name: Certificate reproduction failure
+description: Report a verifier, manifest, or replay result that does not reproduce.
+title: "[reproduction] "
+labels: ["reproduction"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not report a fixed-configuration lower bound as a global-optimality claim.
+        Do not include secrets or security-sensitive details here.
+  - type: input
+    id: n
+    attributes:
+      label: Configuration n
+      placeholder: "15"
+    validations:
+      required: true
+  - type: dropdown
+    id: method
+    attributes:
+      label: Method
+      options:
+        - spectral
+        - componentwise
+        - manifest
+        - full replay
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Exact command
+      description: Include the command and working directory.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python version, commit or tag, and relevant hardware limits.
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Observed output
+      description: Include the minimal stdout/stderr needed to reproduce.
+    validations:
+      required: true

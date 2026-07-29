@@ -1,30 +1,28 @@
-# GitHub release operator checklist — v1.0.0
+# GitHub release operator record — v1.0.0
 
-This is an execution checklist, not a historical status record. The canonical publication state is the GitHub repository, tag, and Release themselves.
+This file records the completed v1.0.0 publication process. The canonical state is the public repository, final tag, and GitHub Release.
 
-## Source and validation
+## Completed source and validation checks
 
-- [ ] Finalize repository metadata with the authenticated GitHub owner and repository URL.
-- [ ] Run `python scripts/verify_manifest.py`.
-- [ ] Run `python scripts/check_release.py`.
-- [ ] Run `python scripts/verify_all.py --quick --jobs 2`.
-- [ ] Confirm the included full clean-room replay remains `88/88 CERTIFIED`.
-- [ ] Confirm publication audit reports zero findings.
+- [x] Repository metadata finalized for `Driedsandwich/square-riesz-polarization-certificates`.
+- [x] `python scripts/verify_manifest.py` passed.
+- [x] `python scripts/check_release.py` passed.
+- [x] The included clean-room replay records 88/88 `CERTIFIED`.
+- [x] The publication audit reported zero secret/privacy findings before release.
 
-## GitHub publication
+## Completed GitHub publication checks
 
-- [ ] Create or confirm the repository `square-riesz-polarization-certificates` in the authenticated personal namespace.
-- [ ] Push the complete finalized tree to the `main` branch.
-- [ ] Verify the `smoke-test` GitHub Actions workflow passes.
-- [ ] Create tag `v1.0.0` from the final `main` commit.
-- [ ] Create the GitHub Release using `RELEASE_NOTES_v1.0.0.md` plus the prepared release body.
-- [ ] Attach the deterministic release ZIP and its `.sha256` file.
-- [ ] Verify asset names, asset sizes, and the published SHA-256.
-- [ ] Verify the repository is public and the README, licenses, citation metadata, and workflows are visible.
+- [x] Complete finalized tree pushed to `main`.
+- [x] Tag `v1.0.0` created from final `main`.
+- [x] GitHub Release created from `RELEASE_NOTES_v1.0.0.md`.
+- [x] Canonical ZIP and `.sha256` companion attached.
+- [x] Asset names, sizes, and SHA-256 verified after re-downloading from the Release.
+- [x] Repository changed to public visibility.
+- [x] README, licenses, citation metadata, and workflows are publicly readable.
+- [ ] A post-publication `smoke-test` run on final `main` has been independently recorded in this document.
 
-## Explicitly out of scope for this publication action
+## Explicitly out of scope
 
 - Zenodo/DOI registration.
 - Emailing Erich Friedman or any third party.
-- Deleting an existing repository or overwriting a repository-name collision.
 - Publishing private correspondence, screenshots, internal master archives, or unrelated files.

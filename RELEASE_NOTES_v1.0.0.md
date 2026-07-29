@@ -8,8 +8,12 @@ This release provides exact-rational lower-bound certificates for fixed configur
 - 88 exact certifier scripts using two rigorous second-order remainder bounds.
 - Exact coordinates, lower bounds, upper witnesses, and saved canonical evidence.
 - Full clean-room replay evidence: 88/88 certifiers passed.
-- Numerical all-local-minimum data where available; these data are explicitly separate from the proof claims.
+- Numerical all-local-minimum **counts** where available in the result table; full local-minimum coordinate lists are not included in v1.0.0 and are not proof inputs.
 
 ## Claim boundary
 
 The release certifies lower bounds for the exact fixed configurations. It does not claim global optimality, exhaustive novelty, or official endorsement.
+
+## Canonical assets
+
+Use the manually uploaded ZIP and its `.sha256` companion. GitHub's automatically generated “Source code” archives are not the canonical deterministic release asset.

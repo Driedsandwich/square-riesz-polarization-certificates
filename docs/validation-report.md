@@ -13,7 +13,7 @@
 
 ## Full public-repository clean-room replay
 
-A clean copy of the public release candidate was extracted to a new directory. All 88 certifier scripts were executed from that copy with Python 3.13.5 and `PYTHONHASHSEED=0`.
+A clean copy of the v1.0.0 release tree was extracted to a new directory. All 88 certifier scripts were executed from that copy with Python 3.13.5 and `PYTHONHASHSEED=0`.
 
 - Verifiers executed: **88**.
 - Return code 0 and `CERTIFIED`: **88/88**.
@@ -25,4 +25,4 @@ Every certifier script hash in the replay record matches the script shipped in t
 
 ## Trust boundary
 
-This validates reproducibility of the included fixed-configuration lower-bound certificates. It does not establish global optimality, exhaustive novelty, or formal completeness of the numerical local-minimum lists.
+This validates reproducibility of the included fixed-configuration lower-bound certificates. It does not establish global optimality, exhaustive novelty, or formal completeness of the underlying numerical local-minimum enumeration.

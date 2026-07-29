@@ -1,5 +1,9 @@
 # Reproducibility
 
+## Scope
+
+The release reproduces and verifies the certificates, not the original exploratory search process. Optimization/search code, random seeds, and complete search transcripts are not included in v1.0.0.
+
 ## Exact certifiers
 
 The exact lower-bound certifiers require Python 3.13 and the standard library only. Each script embeds the exact finite-decimal source coordinates as rational numbers and performs a rational branch-and-bound proof.
@@ -18,4 +22,4 @@ In the v1.0.0 release replay, all 88 verifiers completed successfully. Individua
 
 ## Numerical analysis data
 
-Candidate generation and local-minimum enumeration use optional scientific-Python dependencies listed in `requirements-analysis.txt`. These numerical analyses are not proof dependencies. The exact lower-bound certificates do not rely on the supplied local-minimum lists.
+Candidate generation and local-minimum enumeration used optional scientific-Python dependencies listed in `requirements-analysis.txt`. These numerical analyses are not proof dependencies. The result table includes numerical local-minimum counts where available; full local-minimum coordinate lists are not included in v1.0.0. The exact lower-bound certificates do not rely on those counts.
