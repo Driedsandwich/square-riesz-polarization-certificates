@@ -1,0 +1,31 @@
+name: Data or documentation correction
+description: Report a coordinate, result-table, citation, provenance, or documentation inconsistency.
+title: "[correction] "
+labels: ["data-correction"]
+body:
+  - type: input
+    id: path
+    attributes:
+      label: Affected path
+      placeholder: data/certified-results.csv
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Current content or behavior
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected correction
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Provide a minimal reproducible check or authoritative source.
+    validations:
+      required: true
