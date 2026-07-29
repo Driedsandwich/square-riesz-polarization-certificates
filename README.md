@@ -83,7 +83,7 @@ Configurations for `n>36` are independent, unsubmitted extensions. In every rang
 
 ## Attribution and provenance
 
-Candidate generation and certificate construction were performed using GPT-5.6 Sol Pro in ChatGPT browser mode. Satoshi Kishimoto supervised the research, coordinated audits and external communication, and prepared this release. The initial `n=14,15` package was additionally replayed with Codex under the submitter's supervision.
+Candidate generation and certificate construction were performed using GPT-5.6 Sol Pro in ChatGPT browser mode. Driedsandwich supervised the research, coordinated audits and external communication, and prepared this release. The initial `n=14,15` package was additionally replayed with Codex under the submitter's supervision.
 
 See `NOTICE.md`, `docs/claim-boundaries.md`, `docs/external-status.md`, `docs/methodology.md`, `docs/references.md`, and `docs/reproducibility.md`.
 
