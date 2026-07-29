@@ -1,5 +1,7 @@
 # Notice and provenance
 
+The underlying problem originates with Erich Friedman's “Maximizing Minimum Light Intensity” page at https://erich-friedman.github.io/packing/light/. That page is the primary source for the problem statement and numerical record-board context. This repository is an independent certificate corpus and is not affiliated with or endorsed by Erich Friedman.
+
 - Candidate generation and exact certificate construction: GPT-5.6 Sol Pro in ChatGPT browser mode.
 - Human research supervision, audit coordination, external communication, and public-release preparation: Satoshi Kishimoto.
 - The initial `n=14,15` package was additionally replayed with Codex under the submitter's supervision.
