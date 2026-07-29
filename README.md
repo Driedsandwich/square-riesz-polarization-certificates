@@ -42,11 +42,14 @@ python scripts/verify_all.py --all --jobs 2 --output-dir replay-output
 
 The full release replay executed all **88 verifiers** (44 configurations × 2 methods) from a freshly extracted copy of the public repository. Result: **88/88 returned code 0 and `CERTIFIED`**. See `evidence/full-cleanroom-replay/`.
 
+The release reproduces and verifies the certificates, not the original exploratory search process. Optimization/search code, random seeds, and complete search transcripts are not included in v1.0.0.
+
 ## Data
 
 - `data/certified-results.csv` and `.json`: certified lower bounds, upper witnesses, structure, and internal/external status.
 - `data/configurations/nXX/`: exact source coordinates.
 - `data/non-improvement-results.csv`: `n=9` and `n=13` search outcomes.
+- `all_local_minima_count` in the result tables: numerical counts where available; full local-minimum coordinate lists are not included and are not proof inputs.
 - `evidence/saved-replays/`: canonical saved replay logs.
 - `evidence/full-cleanroom-replay/`: clean-room replay logs for all 88 public certifier scripts.
 
@@ -60,7 +63,7 @@ The maintainer requested that direct submission processing stop at `n=36`. Confi
 
 Candidate generation and certificate construction were performed using GPT-5.6 Sol Pro in ChatGPT browser mode. Satoshi Kishimoto supervised the research, coordinated audits and external communication, and prepared this release. The initial `n=14,15` package was additionally replayed with Codex under the submitter's supervision.
 
-See `NOTICE.md`, `docs/claim-boundaries.md`, `docs/external-status.md`, and `docs/reproducibility.md`.
+See `NOTICE.md`, `docs/claim-boundaries.md`, `docs/external-status.md`, `docs/methodology.md`, `docs/references.md`, and `docs/reproducibility.md`.
 
 ## Licenses
 
