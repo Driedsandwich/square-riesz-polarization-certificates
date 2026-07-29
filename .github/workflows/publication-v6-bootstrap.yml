@@ -1,0 +1,91 @@
+name: publication-v6-bootstrap
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publication-bootstrap
+  cancel-in-progress: false
+
+env:
+  EXPECTED_BASE64_SHA256: 6d0ab8734471e22d863a223f59def5fccf01a0d82fb630420ae2b4c5cdc1ca07
+  EXPECTED_ARCHIVE_SHA256: 15c68d4f76a0ad0026351de6dc9d3a57332c9bedb96ce7f2850ff7b24a134aca
+  EXPECTED_FILE_COUNT: '564'
+  EXPECTED_NONWORKFLOW_FILE_COUNT: '562'
+
+jobs:
+  publish-canonical-tree:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout private staging state
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reassemble and verify canonical payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          for n in {00..12}; do test -f ".publication-payload-v4/part.${n}"; done
+          cat .publication-payload-v4/part.{00..12} > "$RUNNER_TEMP/repo.tar.xz.b64"
+          echo "${EXPECTED_BASE64_SHA256}  $RUNNER_TEMP/repo.tar.xz.b64" | sha256sum -c -
+          base64 -d "$RUNNER_TEMP/repo.tar.xz.b64" > "$RUNNER_TEMP/repo.tar.xz"
+          echo "${EXPECTED_ARCHIVE_SHA256}  $RUNNER_TEMP/repo.tar.xz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/finalized-repo"
+          tar -xJf "$RUNNER_TEMP/repo.tar.xz" -C "$RUNNER_TEMP/finalized-repo"
+          actual_count="$(find "$RUNNER_TEMP/finalized-repo" -type f | wc -l | tr -d ' ')"
+          test "$actual_count" = "$EXPECTED_FILE_COUNT"
+
+      - name: Verify canonical repository before commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/finalized-repo"
+          python3 scripts/verify_manifest.py
+          python3 scripts/check_release.py
+          test ! -e operator
+          test ! -e .publication-payload
+          test ! -e .publication-payload-v4
+          test ! -e .publication-payload-v5
+          test ! -e .publication-trigger
+
+      - name: Replace only non-workflow content and push
+        shell: bash
+        run: |
+          set -euo pipefail
+          workflow_backup="$RUNNER_TEMP/current-workflows"
+          mkdir -p "$workflow_backup"
+          if [ -d .github/workflows ]; then
+            cp -a .github/workflows/. "$workflow_backup/"
+          fi
+
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a "$RUNNER_TEMP/finalized-repo/." .
+
+          rm -rf .github/workflows
+          mkdir -p .github/workflows
+          if find "$workflow_backup" -mindepth 1 -print -quit | grep -q .; then
+            cp -a "$workflow_backup/." .github/workflows/
+          fi
+
+          nonworkflow_count="$(find . -type f ! -path './.git/*' ! -path './.github/workflows/*' | wc -l | tr -d ' ')"
+          test "$nonworkflow_count" = "$EXPECTED_NONWORKFLOW_FILE_COUNT"
+          awk '$2 !~ /^\.github\/workflows\//' SHA256SUMS | sha256sum -c -
+          python3 scripts/check_release.py
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+
+          if ! git diff --cached --quiet -- .github/workflows; then
+            echo 'ERROR: workflow files would change in this commit'
+            git diff --cached --name-status -- .github/workflows
+            exit 1
+          fi
+
+          git commit -m 'release: publish v1.0.0 certified lower-bound corpus'
+          git push origin HEAD:main
