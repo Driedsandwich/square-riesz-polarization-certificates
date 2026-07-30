@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "manifest_path": "SHA256SUMS",
+  "purpose": "Integrity manifest for the exact certificate and reproducibility corpus. Human-facing documentation and GitHub automation are protected by the release-asset SHA-256 rather than this internal manifest.",
+  "include_roots": [
+    "certifiers",
+    "data",
+    "evidence",
+    "scripts"
+  ],
+  "include_files": [
+    "MANIFEST_POLICY.json",
+    "VERSION",
+    "LICENSE",
+    "LICENSE-CODE",
+    "LICENSE-DATA-DOCS.md"
+  ],
+  "exclude_files": [
+    "SHA256SUMS"
+  ],
+  "exclude_globs": [
+    "**/__pycache__/**",
+    "**/*.pyc",
+    "**/.DS_Store"
+  ],
+  "path_order": "lexicographic-posix"
+}
