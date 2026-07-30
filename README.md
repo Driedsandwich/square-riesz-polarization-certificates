@@ -22,7 +22,7 @@ This repository has a narrower, proof-oriented role: it supplies exact-rational 
 
 ## Canonical publication
 
-The canonical repository and `v1.0.0` Release URLs are recorded in `PUBLICATION_STATUS.md` during publication finalization.
+The canonical repository, latest patch Release, preserved `v1.0.0` snapshot, asset names, and checksum interpretation are recorded in `PUBLICATION_STATUS.md`.
 
 This repository contains reproducible **lower-bound certificates for fixed point configurations** in the unit square. For a configuration $X=\{x_1,\ldots,x_n\}\subset[0,1]^2$,
 
@@ -62,7 +62,9 @@ python scripts/verify_all.py --all --jobs 2 --output-dir replay-output
 
 The full release replay executed all **88 verifiers** (44 configurations × 2 methods) from a freshly extracted copy of the public repository. Result: **88/88 returned code 0 and `CERTIFIED`**. See `evidence/full-cleanroom-replay/`.
 
-The release reproduces and verifies the certificates, not the original exploratory search process. Optimization/search code, random seeds, and complete search transcripts are not included in v1.0.0.
+The releases reproduce and verify the certificates, not the original exploratory search process. Optimization/search code, random seeds, and complete search transcripts are not included in `v1.0.0` or `v1.0.1`.
+
+`SHA256SUMS` covers the exact certificate and reproducibility corpus defined by `MANIFEST_POLICY.json`. The complete published snapshot is protected separately by the canonical Release ZIP SHA-256. See `docs/manifest-policy.md`.
 
 ## Data
 
@@ -85,9 +87,9 @@ Direct submissions to the original record board stopped at `n=36` following the 
 
 ## Attribution and provenance
 
-Candidate generation and certificate construction were performed using GPT-5.6 Sol Pro in ChatGPT browser mode. Driedsandwich supervised the research, coordinated audits and external communication, and prepared this release. The initial `n=14,15` package was additionally replayed with Codex under the submitter's supervision.
+Candidate generation and certificate construction were performed using GPT-5.6 Sol Pro in ChatGPT browser mode. Driedsandwich supervised the research, coordinated audits and external communication, and prepared this release. The initial `n=14,15` package was additionally replayed with an independent development environment under the submitter's supervision.
 
-See `NOTICE.md`, `docs/claim-boundaries.md`, `docs/external-status.md`, `docs/methodology.md`, `docs/references.md`, and `docs/reproducibility.md`.
+See `NOTICE.md`, `docs/claim-boundaries.md`, `docs/external-status.md`, `docs/manifest-policy.md`, `docs/methodology.md`, `docs/references.md`, and `docs/reproducibility.md`.
 
 ## Licenses
 
