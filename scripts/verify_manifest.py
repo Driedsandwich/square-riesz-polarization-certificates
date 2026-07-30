@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import PurePosixPath
+
+sys.dont_write_bytecode = True
 
 from manifest_policy import ROOT, collect_expected_files, load_policy, sha256_file
 
