@@ -2,10 +2,13 @@ name: manifest-policy-finalizer
 
 on:
   pull_request:
-    types: [opened]
+    types: [opened, reopened]
 
 permissions:
   contents: write
+
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
 
 jobs:
   finalize:
@@ -21,6 +24,7 @@ jobs:
         run: |
           set -euo pipefail
           rm .github/workflows/manifest-policy-finalizer.yml
+          find . -type d -name __pycache__ -prune -exec rm -rf {} +
           python scripts/regenerate_manifest.py
           python scripts/verify_manifest.py
           python scripts/check_release.py
