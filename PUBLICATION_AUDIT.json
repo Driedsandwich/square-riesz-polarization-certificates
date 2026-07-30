@@ -1,30 +1,35 @@
 {
-  "release_version": "1.0.0",
-  "files_scanned": 562,
+  "release_version": "1.0.1",
+  "audit_run_id": "30508499207",
+  "files_scanned": 575,
   "patterns_checked": [
-    "draft_marker",
-    "email_address",
-    "finalization_placeholder",
     "github_token",
-    "gmail_reference",
+    "local_container_path",
     "mac_user_path",
-    "mnt_data_path",
     "openai_key",
     "private_key",
-    "unrelated_notebook"
+    "private_mailbox",
+    "unrelated_notebook",
+    "public_attribution_boundary"
   ],
   "findings": [],
-  "full_cleanroom_replay": {
+  "internal_manifest": {
+    "policy": "MANIFEST_POLICY.json",
+    "entry_count": 545
+  },
+  "full_release_replay": {
     "verifiers": 88,
     "certified": 88,
     "failed": 0
   },
+  "mathematical_changes_from_v1.0.0": false,
   "status": "PASS",
   "repository_url": "https://github.com/Driedsandwich/square-riesz-polarization-certificates",
-  "release_url": "https://github.com/Driedsandwich/square-riesz-polarization-certificates/releases/tag/v1.0.0",
-  "excluded_files": [
+  "release_url": "https://github.com/Driedsandwich/square-riesz-polarization-certificates/releases/tag/v1.0.1",
+  "excluded_from_internal_manifest": [
     "PUBLICATION_AUDIT.json",
-    "SHA256SUMS"
-  ],
-  "exclusion_reason": "The audit report cannot hash itself, and SHA256SUMS is the manifest being generated."
+    "SHA256SUMS",
+    "human-facing documentation",
+    "GitHub automation"
+  ]
 }
