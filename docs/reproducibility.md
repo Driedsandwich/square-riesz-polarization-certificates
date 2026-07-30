@@ -4,6 +4,19 @@
 
 The release reproduces and verifies the certificates, not the original exploratory search process. Optimization/search code, random seeds, and complete search transcripts are not included in v1.0.0.
 
+## Integrity layers
+
+`SHA256SUMS` covers the exact certificate and reproducibility corpus defined by `MANIFEST_POLICY.json`: certifiers, mathematical data, replay evidence, verification scripts, version metadata, and license files. Human-facing documentation and GitHub automation are intentionally outside that internal manifest.
+
+The complete published Release ZIP, including documentation and automation files, is protected separately by the ZIP's external SHA-256 checksum. See `docs/manifest-policy.md`.
+
+Regenerate and verify the internal manifest with:
+
+```bash
+python scripts/regenerate_manifest.py
+python scripts/verify_manifest.py
+```
+
 ## Exact certifiers
 
 The exact lower-bound certifiers require Python 3.13 and the standard library only. Each script embeds the exact finite-decimal source coordinates as rational numbers and performs a rational branch-and-bound proof.
