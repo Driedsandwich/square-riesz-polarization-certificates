@@ -1,0 +1,47 @@
+name: v1.0.1-prep-finalizer
+
+on:
+  pull_request:
+    types: [opened, reopened]
+
+permissions:
+  contents: write
+
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+
+jobs:
+  finalize:
+    if: github.event.pull_request.head.ref == 'release/v1.0.1-prep'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: release/v1.0.1-prep
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - name: Finalize and validate preparation tree
+        run: |
+          set -euo pipefail
+          rm .github/workflows/v1.0.1-prep-finalizer.yml
+          find . -type d -name __pycache__ -prune -exec rm -rf {} +
+          test "$(tr -d '\r\n' < VERSION)" = '1.0.1'
+          grep -q 'version: "1.0.1"' CITATION.cff
+          grep -q 'date-released: "2026-07-30"' CITATION.cff
+          test -f RELEASE_NOTES_v1.0.1.md
+          test -f .github/workflows/v1.0.1-release-operator.yml
+          python scripts/regenerate_manifest.py
+          python scripts/verify_manifest.py
+          python scripts/check_release.py
+          python scripts/verify_all.py --quick --jobs 2
+      - name: Commit finalized preparation branch
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'chore: finalize v1.0.1 preparation tree'
+          git push origin HEAD:release/v1.0.1-prep
