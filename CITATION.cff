@@ -2,18 +2,18 @@ cff-version: 1.2.0
 message: "If you use the software certifiers, please cite this software release. Code is BSD-3-Clause; original data and documentation are CC BY 4.0 as described in the repository licensing files."
 title: "Certified lower bounds for unit-square Riesz 2-polarization"
 type: software
-version: "1.0.0"
-date-released: "2026-07-29"
-commit: "2f01c00693a1304b063077238d4e86ba7fae9744"
+version: "1.0.1"
+date-released: "2026-07-30"
 authors:
   - family-names: "Kishimoto"
     given-names: "Satoshi"
-abstract: "Exact-rational branch-and-bound certificates for fixed configurations in the unit-square Riesz s=2 polarization problem. Candidate generation and certificate construction used GPT-5.6 Sol Pro under human supervision."
+abstract: "Exact-rational branch-and-bound certificates for fixed configurations in Erich Friedman's unit-square minimum-light-intensity problem (Riesz s=2 polarization). This patch release preserves the mathematical corpus from v1.0.0 while correcting and strengthening documentation, provenance, reproducibility, and repository operations."
 keywords:
   - Riesz polarization
+  - minimum light intensity
   - geometric optimization
   - exact rational arithmetic
   - branch and bound
 license: BSD-3-Clause
 repository-code: "https://github.com/Driedsandwich/square-riesz-polarization-certificates"
-url: "https://github.com/Driedsandwich/square-riesz-polarization-certificates/releases/tag/v1.0.0"
+url: "https://github.com/Driedsandwich/square-riesz-polarization-certificates/releases/tag/v1.0.1"
