@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import sys
+
+sys.dont_write_bytecode = True
+
 from manifest_policy import ROOT, collect_expected_files, load_policy, sha256_file
 
 
