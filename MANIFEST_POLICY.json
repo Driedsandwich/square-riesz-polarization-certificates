@@ -6,7 +6,8 @@
     "certifiers",
     "data",
     "evidence",
-    "scripts"
+    "scripts",
+    "tests"
   ],
   "include_files": [
     "MANIFEST_POLICY.json",

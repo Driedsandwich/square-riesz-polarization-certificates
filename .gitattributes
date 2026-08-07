@@ -1,0 +1,17 @@
+# SHA256SUMS is verified against the bytes in the working tree, so Git must not
+# rewrite line endings on checkout or on add. Without `* -text` a clone with
+# core.autocrlf=true stores data/certified-results.csv with LF, and one with
+# core.autocrlf=input checks it out with LF; both break manifest verification.
+# Measured, not assumed: with only the whitespace attribute below, autocrlf=true
+# produced an LF blob and autocrlf=input produced an LF working-tree file, while
+# `* -text` preserved all 45 CRLF line endings in both directions.
+#
+# `-text` disables end-of-line conversion. It does not change any stored bytes:
+# every file keeps exactly the bytes it has now.
+* -text
+
+# data/certified-results.csv is written by Python's csv module, which emits the
+# RFC 4180 CRLF line ending, and the published v1.0.0/v1.0.1 file is CRLF.
+# Declaring the CR expected keeps `git diff --check` from reporting every
+# regenerated row as trailing whitespace.
+data/certified-results.csv whitespace=cr-at-eol
