@@ -1,32 +1,101 @@
 name: full-certificate-replay
 
+# Runs all 88 certifiers from scratch and validates the output against the
+# sources it claims to have executed.
+#
+# There is deliberately no `paths:` filter on push or pull_request. A workflow
+# skipped by a path filter reports nothing, and a required status check that is
+# never reported leaves a pull request pending forever. Running the full replay
+# on every change costs about half an hour of runner time on a repository that
+# changes rarely, and buys a check that is always present and always meaningful.
+#
+# The job is self-contained: it runs the unit tests and every static check as
+# well as the replay, so making it the single required check loses nothing.
+
 on:
   workflow_dispatch:
+  workflow_call:
+  schedule:
+    - cron: "0 6 * * 1"
+  push:
+  pull_request:
 
 permissions:
   contents: read
+
+concurrency:
+  group: full-replay-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   PYTHONHASHSEED: "0"
 
 jobs:
+  # The job id is the second half of the check name ("full-certificate-replay /
+  # verify-all"). Keep it stable: renaming it silently detaches any required
+  # status check configured against the old name.
   verify-all:
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v7
+          # The frozen-corpus check reads the v1.0.1 commit and tag objects
+          # directly. A shallow checkout does not contain them, and the check
+          # fails closed rather than silently degrading to a baseline-only run.
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
-      - run: python scripts/verify_manifest.py
-      - run: python scripts/check_release.py
-      - run: python scripts/verify_all.py --all --jobs 2 --output-dir ci-full-replay
-      - uses: actions/upload-artifact@v7
+      # -B everywhere: check_release.py treats any __pycache__ under the tree as
+      # a packaging defect, and unittest discovery would create one.
+      # First, before anything that could be reconciled with an edited corpus.
+      # The authority is the v1.0.1 commit object, not the in-tree baseline:
+      # the baseline is a file, and a change that edits it alongside the corpus
+      # satisfied every other check in this job.
+      - name: frozen mathematical corpus (anchored to v1.0.1 objects)
+        run: |
+          python -B scripts/check_frozen_corpus.py \
+            --expect-base-version v1.0.1 \
+            --expect-base-commit d92992101ca45a5cd755b8d962652ab7e4329973 \
+            --require-git-anchor
+      - name: unit tests
+        run: python -B -m unittest discover -s tests -v
+      - name: manifest verification
+        run: python -B scripts/verify_manifest.py
+      - name: release structure check
+        run: python -B scripts/check_release.py
+      - name: semantic consistency check
+        run: python -B scripts/check_semantic_consistency.py
+      - name: result table generation is current
+        run: python -B scripts/regenerate_certified_results.py --check
+      - name: upper witness audit
+        run: python -B scripts/audit_upper_witness.py
+      # ci-full-replay does not exist in a fresh checkout, which is what
+      # verify_all.py requires: it refuses to write into a directory that
+      # already holds files, so stale logs cannot join this run's evidence.
+      # evidence/full-cleanroom-replay/ is a historical record and is never
+      # written to by CI.
+      - name: replay all 88 certifiers
+        run: python -B scripts/verify_all.py --all --jobs 2 --output-dir ci-full-replay
+      # CI is the one place that can insist the replay came from a clean tree at
+      # a known commit. Local evidence is produced from an uncommitted working
+      # tree, so --expect-source-clean is not applied there.
+      - name: validate replay output
+        run: |
+          python -B scripts/validate_replay_output.py ci-full-replay \
+            --expect-all \
+            --expect-source-commit "$GITHUB_SHA" \
+            --expect-source-clean
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: full-replay-logs
           path: ci-full-replay
-          if-no-files-found: error
+          # warn, not error: if the replay step failed before writing anything,
+          # the upload must not fail on top of it and bury the real cause. That
+          # the directory is complete on success is proven by the validator
+          # step above, not by this upload.
+          if-no-files-found: warn
           retention-days: 30

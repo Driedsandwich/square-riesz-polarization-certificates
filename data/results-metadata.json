@@ -1,0 +1,398 @@
+{
+  "7": {
+    "upper_decimal_places": 68,
+    "minimum_source_separation": "0.3379011191887602909771784824649666395177403629374731720096303804387905397607264398492535845616479717",
+    "symmetry_or_family": "reflection x -> 1-x",
+    "all_local_minima_count": "10",
+    "submitted_lower_bound": "35.9098",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": "CERTIFIED_FIXED_CONFIGURATION_EXCEEDS_DISPLAYED_FIGURE"
+  },
+  "8": {
+    "upper_decimal_places": 68,
+    "minimum_source_separation": "0.3829089356417276788976225413115465128564290837985984934612463715810541345564700114370572352063799551",
+    "symmetry_or_family": "full square D4",
+    "all_local_minima_count": "13",
+    "submitted_lower_bound": "47.8390",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": "CERTIFIED_FIXED_CONFIGURATION_EXCEEDS_DISPLAYED_FIGURE"
+  },
+  "10": {
+    "upper_decimal_places": 68,
+    "minimum_source_separation": "0.00100000000000000",
+    "symmetry_or_family": "reflection x -> 1-x; all points distinct; closest pair separated by 0.001",
+    "all_local_minima_count": "16",
+    "submitted_lower_bound": "62.4087",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": "CERTIFIED_FIXED_CONFIGURATION_EXCEEDS_DISPLAYED_FIGURE"
+  },
+  "11": {
+    "upper_decimal_places": 68,
+    "minimum_source_separation": "0.2896202909704420988758815344874469385033707655878306862144951113033125977156168005951751487918353709",
+    "symmetry_or_family": "reflections x -> 1-x and y -> 1-y",
+    "all_local_minima_count": "18",
+    "submitted_lower_bound": "74.3527",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": "CERTIFIED_FIXED_CONFIGURATION_EXCEEDS_DISPLAYED_FIGURE"
+  },
+  "12": {
+    "upper_decimal_places": 78,
+    "minimum_source_separation": "0.2487931811220751659404167468713980047335743735411566318133285945612528371311206451546836824649083996",
+    "symmetry_or_family": "none imposed; fully asymmetric fixed configuration",
+    "all_local_minima_count": "",
+    "submitted_lower_bound": "83.57159574",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": "CERTIFIED_FIXED_CONFIGURATION_EXCEEDS_DISPLAYED_FIGURE"
+  },
+  "14": {
+    "upper_decimal_places": 87,
+    "minimum_source_separation": "0.21563324958867536",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "24",
+    "submitted_lower_bound": "106.1907263",
+    "external_status": "DIRECT_OFFICIAL_LISTING_CONFIRMED; EMAIL_SUBMITTED",
+    "notes": "RETAINED_CERTIFIED_FIXED_CONFIGURATION"
+  },
+  "15": {
+    "upper_decimal_places": 87,
+    "minimum_source_separation": "0.2610378046273534777923080659401956398751996687311502998214177037600820167902571733225619681729865699",
+    "symmetry_or_family": "provenance: left-right reflective family; the published finite decimals have no exact non-identity square symmetry",
+    "all_local_minima_count": "25",
+    "submitted_lower_bound": "113.19143",
+    "external_status": "DIRECT_OFFICIAL_LISTING_CONFIRMED; EMAIL_SUBMITTED",
+    "notes": "IMPROVED_CERTIFIED_FIXED_CONFIGURATION"
+  },
+  "16": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.2104088772371703657791046958695040804001518496748139362854200762321522648420999791371658488873978551",
+    "symmetry_or_family": "provenance: retained verifier; the published finite decimals are exactly invariant under x -> 1-x and y -> 1-y and 180-degree rotation but not under diagonal reflections or 90-degree rotations",
+    "all_local_minima_count": "26",
+    "submitted_lower_bound": "125.4580973",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": "RETAINED_NO_IMPROVEMENT_FOUND"
+  },
+  "17": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.1973397780026910379243610990000446091208661250390181160003338994242092116524062930022887203010567622",
+    "symmetry_or_family": "none/full square",
+    "all_local_minima_count": "26",
+    "submitted_lower_bound": "133.9074427",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": "IMPROVED_FULLY_ASYMMETRIC"
+  },
+  "18": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.2183328195059586972988239977069525903167649237367855285786487733375180015095599497395501979270245376",
+    "symmetry_or_family": "D2 quarter-square",
+    "all_local_minima_count": "27",
+    "submitted_lower_bound": "141.5565348",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": "IMPROVED_D2_SYMMETRIC"
+  },
+  "19": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.1990047270225217095631968718458908932549184835587560588359170719334334793810654018801682285742668431",
+    "symmetry_or_family": "none/full square",
+    "all_local_minima_count": "28",
+    "submitted_lower_bound": "152.8544825",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": "IMPROVED_FULLY_ASYMMETRIC"
+  },
+  "20": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.2167048464077485334443395491811020971298696803893328839634309548844288810423910297192814798464288827",
+    "symmetry_or_family": "D4 symmetric 20-point configuration",
+    "all_local_minima_count": "",
+    "submitted_lower_bound": "165.2728601",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": "IMPROVED"
+  },
+  "21": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.2088750294907897567492715888116652827307878388598907877715733840739687244120290970347701349660435757",
+    "symmetry_or_family": "fully asymmetric 21-point exchange-refined configuration",
+    "all_local_minima_count": "",
+    "submitted_lower_bound": "172.6585459",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": "IMPROVED"
+  },
+  "22": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.2094033230820947934910039579649111255419164313674012326139782012848653721952863752463879728897543627",
+    "symmetry_or_family": "retained D2 incumbent",
+    "all_local_minima_count": "",
+    "submitted_lower_bound": "195.0509",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": "RETAINED_NO_IMPROVEMENT_FOUND"
+  },
+  "23": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.18425006704918060",
+    "symmetry_or_family": "retained D2 incumbent plus center",
+    "all_local_minima_count": "",
+    "submitted_lower_bound": "205.7568",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": "RETAINED_NO_IMPROVEMENT_FOUND"
+  },
+  "24": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.1784627572280327482136267860628777852224689994326901805327487002221887273303481373464035220174538874",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "40",
+    "submitted_lower_bound": "215.5737",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": ""
+  },
+  "25": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.1683049875346869975932258864646466331244045007571197005398383467262445018822847188077111100511180069",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "44",
+    "submitted_lower_bound": "225.1002",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": ""
+  },
+  "26": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.1700653565393622",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "38",
+    "submitted_lower_bound": "234.7591",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": ""
+  },
+  "27": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.1709163210130844349359690320715959977619475228120519935800339891266147826751451316742020043144590246",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "40",
+    "submitted_lower_bound": "242.0551",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": ""
+  },
+  "28": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.1295988333089825",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "46",
+    "submitted_lower_bound": "252.4470",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": ""
+  },
+  "29": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.0049999891523434",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "40",
+    "submitted_lower_bound": "259.9483",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": ""
+  },
+  "30": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.1236005787208599",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "46",
+    "submitted_lower_bound": "268.3190",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": ""
+  },
+  "31": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.0050000000000000",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "44",
+    "submitted_lower_bound": "274.7270",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": ""
+  },
+  "32": {
+    "upper_decimal_places": 97,
+    "minimum_source_separation": "0.0049999992751448",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "42",
+    "submitted_lower_bound": "279.8516",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": ""
+  },
+  "33": {
+    "upper_decimal_places": 97,
+    "minimum_source_separation": "0.0049999999999986",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "40",
+    "submitted_lower_bound": "287.670",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": ""
+  },
+  "34": {
+    "upper_decimal_places": 97,
+    "minimum_source_separation": "0.0049999993434081",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "46",
+    "submitted_lower_bound": "297.004",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": ""
+  },
+  "35": {
+    "upper_decimal_places": 87,
+    "minimum_source_separation": "0.0049999999999947",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "44",
+    "submitted_lower_bound": "303.346",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": ""
+  },
+  "36": {
+    "upper_decimal_places": 97,
+    "minimum_source_separation": "0.0049999999999017",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "46",
+    "submitted_lower_bound": "310.825",
+    "external_status": "EMAIL_SUBMITTED",
+    "notes": ""
+  },
+  "37": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.0007003808293093",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "",
+    "submitted_lower_bound": "",
+    "external_status": "INTERNAL_ONLY_NOT_SUBMITTED",
+    "notes": ""
+  },
+  "38": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.0010349597172930",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "",
+    "submitted_lower_bound": "",
+    "external_status": "INTERNAL_ONLY_NOT_SUBMITTED",
+    "notes": ""
+  },
+  "39": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.0006715856446353",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "",
+    "submitted_lower_bound": "",
+    "external_status": "INTERNAL_ONLY_NOT_SUBMITTED",
+    "notes": ""
+  },
+  "40": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.0004992791666397",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "",
+    "submitted_lower_bound": "",
+    "external_status": "INTERNAL_ONLY_NOT_SUBMITTED",
+    "notes": ""
+  },
+  "41": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.0009998000000000",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "44",
+    "submitted_lower_bound": "",
+    "external_status": "INTERNAL_ONLY_NOT_SUBMITTED",
+    "notes": ""
+  },
+  "42": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.0009999975522813",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "45",
+    "submitted_lower_bound": "",
+    "external_status": "INTERNAL_ONLY_NOT_SUBMITTED",
+    "notes": ""
+  },
+  "43": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.0009999973167817",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "44",
+    "submitted_lower_bound": "",
+    "external_status": "INTERNAL_ONLY_NOT_SUBMITTED",
+    "notes": ""
+  },
+  "44": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.0009999971002350",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "42",
+    "submitted_lower_bound": "",
+    "external_status": "INTERNAL_ONLY_NOT_SUBMITTED",
+    "notes": ""
+  },
+  "45": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.0010000015892116",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "40",
+    "submitted_lower_bound": "",
+    "external_status": "INTERNAL_ONLY_NOT_SUBMITTED",
+    "notes": ""
+  },
+  "46": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.0009999967921386",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "41",
+    "submitted_lower_bound": "",
+    "external_status": "INTERNAL_ONLY_NOT_SUBMITTED",
+    "notes": ""
+  },
+  "47": {
+    "upper_decimal_places": 67,
+    "minimum_source_separation": "0.0009999966437545",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "40",
+    "submitted_lower_bound": "",
+    "external_status": "INTERNAL_ONLY_NOT_SUBMITTED",
+    "notes": ""
+  },
+  "48": {
+    "upper_decimal_places": 57,
+    "minimum_source_separation": "0.0009999967118562",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "41",
+    "submitted_lower_bound": "",
+    "external_status": "INTERNAL_ONLY_NOT_SUBMITTED",
+    "notes": ""
+  },
+  "49": {
+    "upper_decimal_places": 57,
+    "minimum_source_separation": "0.0009999962028269",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "40",
+    "submitted_lower_bound": "",
+    "external_status": "INTERNAL_ONLY_NOT_SUBMITTED",
+    "notes": ""
+  },
+  "50": {
+    "upper_decimal_places": 57,
+    "minimum_source_separation": "0.0010002944157835",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "41",
+    "submitted_lower_bound": "",
+    "external_status": "INTERNAL_ONLY_NOT_SUBMITTED",
+    "notes": ""
+  },
+  "51": {
+    "upper_decimal_places": 57,
+    "minimum_source_separation": "0.0009999958709469",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "40",
+    "submitted_lower_bound": "",
+    "external_status": "INTERNAL_ONLY_NOT_SUBMITTED",
+    "notes": ""
+  },
+  "52": {
+    "upper_decimal_places": 57,
+    "minimum_source_separation": "0.0009999995858618",
+    "symmetry_or_family": "",
+    "all_local_minima_count": "41",
+    "submitted_lower_bound": "",
+    "external_status": "INTERNAL_ONLY_NOT_SUBMITTED",
+    "notes": ""
+  }
+}

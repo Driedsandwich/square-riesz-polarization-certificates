@@ -13,13 +13,41 @@ env:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v7
+          # The frozen-corpus check reads the v1.0.1 commit and tag objects
+          # directly. A shallow checkout does not contain them, and the check
+          # fails closed rather than silently degrading to a baseline-only run.
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
-      - run: python scripts/verify_manifest.py
-      - run: python scripts/check_release.py
-      - run: python scripts/verify_all.py --quick --jobs 2
+      # -B everywhere: check_release.py treats any __pycache__ under the tree as
+      # a packaging defect, and unittest discovery would create one.
+      # First, before anything that could be reconciled with an edited corpus.
+      # The authority is the v1.0.1 commit object, not the in-tree baseline:
+      # the baseline is a file, and a change that edits it alongside the corpus
+      # satisfied every other check in this job.
+      - name: frozen mathematical corpus (anchored to v1.0.1 objects)
+        run: |
+          python -B scripts/check_frozen_corpus.py \
+            --expect-base-version v1.0.1 \
+            --expect-base-commit d92992101ca45a5cd755b8d962652ab7e4329973 \
+            --require-git-anchor
+      - name: unit tests
+        run: python -B -m unittest discover -s tests -v
+      - name: manifest verification
+        run: python -B scripts/verify_manifest.py
+      - name: release structure check
+        run: python -B scripts/check_release.py
+      - name: semantic consistency check
+        run: python -B scripts/check_semantic_consistency.py
+      - name: result table generation is current
+        run: python -B scripts/regenerate_certified_results.py --check
+      - name: upper witness audit
+        run: python -B scripts/audit_upper_witness.py
+      - name: quick verifier replay
+        run: python -B scripts/verify_all.py --quick --jobs 2

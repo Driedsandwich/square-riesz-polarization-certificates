@@ -1,8 +1,23 @@
-74b45fa523a2547b164919f877d72aab3347abc07498c63a756ccec2ada1ac9b  LICENSE
-74b45fa523a2547b164919f877d72aab3347abc07498c63a756ccec2ada1ac9b  LICENSE-CODE
-16a71fbc5e7bc4d1e7bb8150692e671a53878b34a310ac2ecc8deb1e810ca35a  LICENSE-DATA-DOCS.md
-2e48815275d1edf53081e69e17cbddb01274cec231af6159f7d2d19318f08f8b  MANIFEST_POLICY.json
-44e161e4495cac2cf7858043e9e6418e9579f0ddcfae826f9a372622968ce066  VERSION
+# Frozen mathematical corpus of square-riesz-polarization-certificates.
+#
+# These files carry the mathematics: the 88 exact certifiers, the 44 published
+# configurations and the historical replay evidence. They are fixed by the
+# release below and are not touched by maintenance work on the checking tools.
+#
+# Their SHA-256 values also appear in SHA256SUMS, but that manifest is
+# regenerated whenever the repository changes, so it cannot tell a maintenance
+# patch apart from an edit to a certifier. This baseline is not regenerated:
+# scripts/regenerate_manifest.py does not write it, and only an explicit
+# research release may change it. See docs/frozen-corpus.md.
+#
+# base-version: v1.0.1
+# base-commit: d92992101ca45a5cd755b8d962652ab7e4329973
+# file-count: 531
+#
+# Format: <sha256>  <repo-relative path>, sorted by path. The authoritative
+# reader is scripts/check_frozen_corpus.py, which also rejects extra and
+# missing files. GNU `sha256sum -c` verifies the entries but prints a
+# "lines are improperly formatted" warning for the comment block above.
 dfd437049e78668b0a305a5513e678627d16d2f6cd53e041c51c8c77b7902554  certifiers/n07/componentwise.py
 10faf8c795c856ab07448d251a91a004d9a6f15c571e1c9aec6824bfd31807ee  certifiers/n07/spectral.py
 20995594c77a4bbcf4a66772555c3ca44103bee61b3753ea3b906b2ba744e044  certifiers/n08/componentwise.py
@@ -91,8 +106,6 @@ f1c0a2cf7c1afafc5c838e825ecefdddf2cc4b38f32f81027dcece1d61d19847  certifiers/n49
 08e3a1e44de0852f58fd54443bdac63d7b36d5e205891f16b84b1719ae69beeb  certifiers/n51/spectral.py
 31b637e31b88e311a501f2d3e043b62578f66af9380eab88f82fe470b244a54f  certifiers/n52/componentwise.py
 3bffc50763d01d50f58350df83550a9eca9e2116139ddac8cd8938bcad3b5c10  certifiers/n52/spectral.py
-120a40fac00cadd957930f895272506825d83c8226e5ff75e568bd4d6268f053  data/certified-results.csv
-84f2c39ce98bbd557e984affa1b61bb44b19424c18bb3f04bd50ede96fde47c7  data/certified-results.json
 c762af1e5024b2e25d1b5ceec36e2d11411ab422d4fcbf107a3d9c9e29846433  data/configurations/n07/coordinates-source.txt
 28ebb25f88f2dfd0760ea238a98b4285296066157eb7380f7df77ce04bea506f  data/configurations/n07/coordinates.csv
 d297bdd32df88a3526d2ba0e2ed0fa496d2bb8093ab586416416cc43a4d67cbe  data/configurations/n08/coordinates-source.txt
@@ -181,9 +194,6 @@ d4b8486e24e8c74cda8362ba0f0e849fc345f7d794857f879ad6af3decf64764  data/configura
 67fce3f12f866b19c8222f45a63cf3c12eb4e5fd36bc95158309d8f02e0bc778  data/configurations/n51/coordinates.csv
 93debd441df45595172dd316bceb899fd396bf4199d4ed034d54bcd4b7fb0c91  data/configurations/n52/coordinates-source.txt
 5ce58f3146476d8ade6db86585916b7c2c768923e00c804739d4c1b72618049b  data/configurations/n52/coordinates.csv
-6a1de899ae25ed20892e6058d28830f057bac952f5c7be22f7e3c60128673496  data/frozen-corpus-v1.0.1.sha256
-d82f79e9f854ddc6c83bb658d1aeede7efc59b42e6bd86e9d53926b4a8cf8016  data/non-improvement-results.csv
-5efa53de294b6a9d07a7c107bcf7238505f1b542443d02f90d85678fb264b411  data/results-metadata.json
 d4efff03dfa48039c1536bd29a5f541682ac58c84a3466a51523877baac8ce2f  evidence/full-cleanroom-replay/PUBLIC_REPO_FULL_REPLAY.csv
 65d6f88d69ec6985aca9301f998eb5edc5260ae896f564771a827307efe8e50b  evidence/full-cleanroom-replay/PUBLIC_REPO_FULL_REPLAY.json
 49a1954597e208c41a1a2fa4f120489d53a3fcff384076ac0d16ea13603ff00f  evidence/full-cleanroom-replay/PUBLIC_REPO_FULL_REPLAY.md
@@ -539,26 +549,3 @@ cfcee153b4302546ce20b0820888906e974150ea025c43a6df0ef7a969cbb5b8  evidence/saved
 32add1b1eb496a6afd76fc2a02439e6f70ad245d5ee9a2f109f4321a659deee9  evidence/saved-replays/n51/spectral.txt
 b3f1c0ad8d316c06c7e805e0243c97a3d022a4795915d5d2e3fd4c3291bda5b1  evidence/saved-replays/n52/componentwise.txt
 116ae8ad7653e8928f7aa8da7bb31a81737f6538a2f8e08bec67a1f9f1fefd74  evidence/saved-replays/n52/spectral.txt
-cb7001ca8367079ac45ca06a8759fec387fb01d064730f15ce2fb1baf1070277  scripts/audit_upper_witness.py
-bd5adac2c88419f9359f5a7d076d1d05833c6a9b1a1075fda5ad82496c1caf25  scripts/certificate_lib.py
-24473189fda86d1aeb1cf0d40dbbfcacb3d827e31f418ceda42d510426318207  scripts/check_frozen_corpus.py
-21b96e7491487e136bcc324a249866614ddbbbef2eba4694a8a83147afe28939  scripts/check_release.py
-afe314906b9ecb94b9b9635a13c9ff9a6e69d74d4572d4c31c834e0fd04494b7  scripts/check_semantic_consistency.py
-c67d7d9650af01a8b669221bfeae7e9a4b42a67a9c632ffc4cdc1db7a47aa837  scripts/manifest_policy.py
-baeebde4393a4054cd63a3f77c0870d7979abb07bcb54d4c9ad79ac2552d59ee  scripts/regenerate_certified_results.py
-cbbd3d6368ad71411f4fba984ff84c01882dfd2aa3cbf7a9aaeafe46e49c1c6c  scripts/regenerate_manifest.py
-61c19e4202dd15bc92c97feeb2038b022f53069ae74769d0ef67a9561f3b48a6  scripts/validate_replay_output.py
-54d1211f70c649e8cc5837b79e06509918c7f5a4c69f51e5f8e9b659f53d16e9  scripts/verifier_runner.py
-9b3695152e1ead1221693f0dccd1c7993a1f45993422cda7847a2986bc762768  scripts/verify_all.py
-57935cdbf4a19c87abddea4ad1762fd29394df285f2be7f2f3ec1bb672e16414  scripts/verify_manifest.py
-7bc2b4f4d5ebca3a7d5557b555b5741fd08abd02f4e18857318d42ef2737d005  scripts/verify_one.py
-f5caaaa49df8503ab1ee2ae5a6e49dda229c18dd54046d1ed30921a3dd8207a5  tests/support.py
-8375add1263d77988688539a8c6d35f0b83ab014e9291df1b21340e36a39a604  tests/test_followup_hardening.py
-69b58b906131b4f71ab761ecce75efc33a95d057c9c103fcbf5af1323e463e8f  tests/test_result_table_generation.py
-ae962728eb7473bf54e3372d0caca22a8dd567cadbd1fc7a729ba6d1d93c27a2  tests/test_round3_hardening.py
-fe8e6db2a303970d5c070c8fab342edce76778c380b62a84196956487440cb81  tests/test_round4_hardening.py
-5f75effaf81d076a1ade63d1e89019f1eb3ec34ef085ec9ab6c4adc0c6790924  tests/test_round5_hardening.py
-f47d9d6e1056431a1485f82e2a153edb119c6efa1f1e0c7416554eb045137a79  tests/test_round6_hardening.py
-333a8fccf9d8029afae2c7227711cacccd7bf55e097aa2cd823718b26684c29a  tests/test_semantic_consistency.py
-bcd68f526701ce2a67a649566946969cbb692b12b9c328e50072fa7ed9245af8  tests/test_success_contract.py
-89fa1805ad3af9a17d05443b880311460274868c61b03a0f02d990144127dc11  tests/test_upper_witness.py
