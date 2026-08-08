@@ -1,35 +1,179 @@
 {
-  "release_version": "1.0.1",
-  "audit_run_id": "30508499207",
-  "files_scanned": 575,
-  "patterns_checked": [
-    "github_token",
-    "local_container_path",
-    "mac_user_path",
-    "openai_key",
-    "private_key",
-    "private_mailbox",
-    "unrelated_notebook",
-    "public_attribution_boundary"
-  ],
-  "findings": [],
+  "schema_version": 2,
+  "release_version": "1.0.2",
+  "audit_type": "static_release_candidate",
+  "status": "PASS_LOCAL_CANDIDATE_NOT_PUBLICATION_ATTESTATION",
+  "what_this_file_is": "A record of what could be checked about this release candidate before the commit containing this file existed. It is not evidence that anything was published.",
+  "what_this_file_cannot_contain": "The final merge commit, the tag target, the post-merge CI run identifiers, the release artifact digest, the Release and asset identifiers, and the canonical ZIP digest. Each of those comes into existence after the commit that would have to carry it, and writing a CI result into a commit changes that commit and invalidates the record. They are attested by a separate publication-attestation asset uploaded to the draft Release before publication, not by this file and not by the release notes.",
+  "candidate_date_utc": "2026-08-08",
+  "candidate_base_commit": "2adfffb7dc68f40ea52fd1ed78bc2f11a46de78b",
+  "frozen_anchor_commit": "d92992101ca45a5cd755b8d962652ab7e4329973",
+  "frozen_anchor_version": "v1.0.1",
   "internal_manifest": {
     "policy": "MANIFEST_POLICY.json",
-    "entry_count": 545
+    "entry_count": 568,
+    "sha256": "09125bc8a0a985c93e8ce33bb91eb570146f4c0f02726f9aaf74cb39a4e9d3e6",
+    "note": "This file is outside the manifest policy, so recording the manifest digest here is not circular."
   },
-  "full_release_replay": {
+  "local_candidate_replay": {
+    "scope": "local working tree, not a release commit",
+    "source_git_commit": "2adfffb7dc68f40ea52fd1ed78bc2f11a46de78b",
+    "source_git_dirty": true,
     "verifiers": 88,
     "certified": 88,
-    "failed": 0
+    "failed": 0,
+    "timed_out": 0,
+    "validator_problems": 0,
+    "python_version": "3.13.14",
+    "note": "source_git_dirty is true because the candidate is an uncommitted working tree. This run therefore does not describe any commit, and must not be presented as the release replay. The release replay is the post-merge run on main, validated with --expect-source-clean."
   },
-  "mathematical_changes_from_v1.0.0": false,
-  "status": "PASS",
+  "static_checks": {
+    "frozen_corpus_files_agreeing": 531,
+    "frozen_corpus_git_anchor": "verified",
+    "configurations": 44,
+    "upper_witness_rows_below_exact": 0,
+    "upper_witness_rows_at_or_above_exact": 44,
+    "manifest_missing": 0,
+    "manifest_bad_hash": 0,
+    "unit_tests": 470
+  },
+  "changes_from_v1.0.1": {
+    "fixed_configurations_changed": false,
+    "certified_lower_bounds_changed": false,
+    "certifier_sources_changed": false,
+    "witness_points_changed": false,
+    "historical_replay_evidence_changed": false,
+    "upper_witness_decimal_corrections": 18,
+    "interval_width_corrections": 18,
+    "provenance_text_corrections": 2,
+    "derivation": "Diff of data/certified-results.json at v1.0.1 against this tree: 44 configurations with an identical key set; rigorous_upper_witness and interval_width differ on exactly n = 8, 15, 18, 19, 20, 24, 26, 27, 29, 30, 32, 35, 36, 39, 43, 45, 46, 47; symmetry_or_family differs on n = 15 and n = 16; certified_lower_bound differs nowhere. Each of the 18 corrections is exactly +1 in the final published digit."
+  },
+  "dynamic_publication_attestation": {
+    "location": "release asset square-riesz-polarization-certificates-v1.0.2.publication-attestation.json, uploaded to the draft Release before publication",
+    "generator": "scripts/build_publication_attestation.py",
+    "embedded_in_source_tree": false,
+    "not_the_release_body": "GitHub's immutable releases protect the tag and the release assets. GitHub's documentation states that once immutable releases are enabled you can only edit the title and release notes after a release is published, so a record kept in the release body stays editable and cannot be the integrity authority.",
+    "reason": "The final merge commit, the post-merge CI runs and the asset facts do not exist before the release commit and cannot be self-attested by that same commit.",
+    "fields_recorded_there": [
+      "final merge commit and tree",
+      "tag target",
+      "repository full name, draft release id, draft tag name and draft state",
+      "post-merge smoke-test and full-certificate-replay run identifiers, with each run's workflow name, triggering event, head branch and head SHA",
+      "full-replay artifact identifier, name, parent run, expiry and digest",
+      "replay validator counters against the merge commit with a clean source",
+      "the builder's complete build record, including the builder source binding and the pre-tag expected-digest gate",
+      "canonical ZIP digest and size, and each asset's name and parent release id",
+      "checksum sidecar digest",
+      "draft asset re-download verification",
+      "the draft Release's exact asset inventory measured immediately before this document was uploaded"
+    ],
+    "not_recordable_even_there": "The attestation asset's own GitHub asset id and its own digest, which do not exist until it is uploaded, and the post-publication immutable read-back. Those are carried by GitHub's generated release attestation, which binds the tag, the commit and all three assets, and by the external execution evidence.",
+    "release_assets": {
+      "distribution": [
+        "square-riesz-polarization-certificates-v1.0.2.zip",
+        "square-riesz-polarization-certificates-v1.0.2.zip.sha256"
+      ],
+      "auxiliary_integrity": [
+        "square-riesz-polarization-certificates-v1.0.2.publication-attestation.json"
+      ]
+    },
+    "build_record_embedded": true,
+    "build_record_preimage": "The strictly validated build record is embedded whole under canonical_assets.build_record, and build_record_sha256 is the SHA-256 of json.dumps(build_record, indent=2, sort_keys=True) + \"\\n\" encoded UTF-8, so a reader of the Release can recompute the published digest from the object published beside it. The record file must already be in that canonical spelling or the generator refuses."
+  },
+  "canonical_asset_builder": {
+    "path": "scripts/build_release_assets.py",
+    "tests": "tests/test_release_assets.py",
+    "generation_semantics": "git archive --format=zip -9 --prefix=square-riesz-polarization-certificates-v1.0.2/ <target>",
+    "exact_tag_binding": "--require-tag resolves refs/tags/<name> by exact ref only; a branch of the same name is refused, because a plain revision lookup accepts one.",
+    "archive_equals_tree": "The archive is compared against the raw target tree read with ls-tree and a strict cat-file --batch, path by path, byte by byte and mode by mode. That is what rejects export-ignore omission and export-subst rewriting, including attributes that are not in any commit.",
+    "attribute_sources_neutralised": [
+      "GIT_ATTR_NOSYSTEM=1",
+      "core.attributesFile=/dev/null",
+      "GIT_CONFIG_GLOBAL=/dev/null",
+      "GIT_CONFIG_SYSTEM=/dev/null",
+      "GIT_CONFIG_* removed",
+      "GIT_ATTR_SOURCE removed",
+      "non-empty .git/info/attributes refused"
+    ],
+    "transactional": "Everything is produced in a private staging directory and moved to the destination only after every check passes, so a refused build leaves no canonical-named ZIP or checksum companion behind.",
+    "public_record_redaction": "The recorded build command carries <REPOSITORY> and <OUTPUT_ZIP> instead of local paths, because it is destined for a published attestation.",
+    "determinism_boundary": "Byte-identical rebuilds are asserted for repeated builds of the same commit with the same git version on the same platform, with the subprocess environment constructed from an allow-list and TZ=UTC and LC_ALL=C fixed. TZ matters: git archive writes DOS member timestamps in local time, and an inherited timezone produced a different digest from the same commit. Cross-platform and cross-git-version reproducibility is not claimed.",
+    "target_sensitivity": "git archive writes the source commit id into the archive, so two commits with byte-identical trees produce different ZIP digests. The tag ruleset forbids moving a v* tag, so the target is fixed at tag creation.",
+    "environment_fixed": [
+      "TZ=UTC",
+      "LC_ALL=C",
+      "LANG=C",
+      "GIT_NO_REPLACE_OBJECTS=1",
+      "GIT_ATTR_NOSYSTEM=1",
+      "GIT_CONFIG_GLOBAL=/dev/null",
+      "GIT_CONFIG_SYSTEM=/dev/null"
+    ],
+    "environment_dropped": [
+      "GIT_DIR",
+      "GIT_WORK_TREE",
+      "GIT_INDEX_FILE",
+      "GIT_OBJECT_DIRECTORY",
+      "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+      "GIT_COMMON_DIR",
+      "GIT_NAMESPACE",
+      "GIT_SHALLOW_FILE",
+      "GIT_REPLACE_REF_BASE",
+      "GIT_ATTR_SOURCE",
+      "all GIT_CONFIG_*"
+    ],
+    "atomic_publication": "The ZIP, the checksum companion and build-record.json are produced in a staging directory beside the destination and published by a single rename of that directory, so --output-dir must not exist beforehand and either does not exist or holds all three files. Moving the files one at a time previously left a canonical-named ZIP behind when the second move failed.",
+    "expected_digest_gate": "--require-tag requires --expect-asset-sha256. The tagged build must reproduce the digest measured by a tagless build of the same commit, and the final record must show that the expected digest equals the digest produced. A pre-tag record may carry null; the attestation refuses one. Measured counterexample: a tagged build with no expected digest recorded expected_asset_sha256: null and the attestation accepted it, so the published asset never showed that the gate had been used.",
+    "build_record": {
+      "path": "build-record.json in the output directory",
+      "schema": "square-riesz-release-asset-build.v4",
+      "note": "The attestation generator reads this file directly rather than accepting a retyped copy of the builder command, validates every top-level and nested field against an exact schema, and embeds the whole record in the published asset.",
+      "added_in_v4": [
+        "head_commit, required to equal target_commit",
+        "builder_script_blob_oid and builder_script_mode",
+        "builder_script_target_sha256 and builder_script_executed_sha256",
+        "builder_script_matches_target",
+        "output_inventory, the exact three published file names"
+      ],
+      "archive_command_source": "derived from the argv that actually ran, with the repository path and the output path replaced, so the published command cannot drift from the executed one"
+    },
+    "builder_source_binding": "A release build is valid only when the executing script is byte-identical to scripts/build_release_assets.py inside the target commit. HEAD must be the target; the builder blob is read out of the raw target tree with a strict cat-file --batch, its bytes are hashed, the running file's bytes are hashed, and a mismatch is refused before any output exists. The running file is hashed again before the record is written. Measured counterexample: a target whose builder blob was different bytes from the script that ran produced exit 0 for the pre-tag build, the tagged build and the publication attestation, because the record held a 40-hex blob id and a 64-hex file digest that were never required to describe the same bytes.",
+    "exit_codes": {
+      "0": "the output directory was published and its durability confirmed",
+      "2": "refused before the publication commit point; no output directory exists",
+      "3": "the publishing rename succeeded and a later step failed. The output exists; whether its directory entry survives a power loss is unknown. This holds even when the inspection that would describe the output also fails: everything after the rename is caught as BaseException and reclassified, the inspection is a non-throwing best-effort helper, and an undetermined check is reported as unknown rather than as false. The command must not be re-run and the directory must not be uploaded automatically. Measured counterexamples: failing the parent fsync after the rename produced exit 2 and 'nothing published' over a complete three-file directory; failing the inspection as well produced the same wrong report a second time."
+    },
+    "commit_point_boundary": "The publication transaction spans the os.rename / os.replace call, the statement that records it, the durability fsync and the return, and in the CLI it spans the call into the builder, the success report and the return. Guarding only the syscall left the next statement and the success report outside every handler: measured with KeyboardInterrupt, SystemExit and a custom BaseException, the first produced exit 2 and 'nothing published' over a complete output, the second escaped as a traceback. Failures are classified by observing the destination, never by a flag; only a definite absence permits reporting one. SIGKILL, process crash and power loss remain uncatchable and are not claimed to be handled.",
+    "renamed_directory_identity": "The staging directory's (st_dev, st_ino) is recorded before the rename and compared with the destination afterwards, so an interrupted publish can report whether the directory on disk is the staging directory that was moved. Where inode identity is not decisive the field is null and the classification stays conservative."
+  },
   "repository_url": "https://github.com/Driedsandwich/square-riesz-polarization-certificates",
-  "release_url": "https://github.com/Driedsandwich/square-riesz-polarization-certificates/releases/tag/v1.0.1",
   "excluded_from_internal_manifest": [
     "PUBLICATION_AUDIT.json",
     "SHA256SUMS",
     "human-facing documentation",
     "GitHub automation"
-  ]
+  ],
+  "publication_attestation_generator": {
+    "path": "scripts/build_publication_attestation.py",
+    "tests": "tests/test_publication_attestation.py",
+    "output_asset": "square-riesz-polarization-certificates-v1.0.2.publication-attestation.json",
+    "inputs": [
+      "measured GitHub and CI facts",
+      "the builder's build-record.json"
+    ],
+    "status_emitted": "PRE_PUBLICATION_DISTRIBUTION_ASSETS_VERIFIED",
+    "note": "Binds the build record to the merge commit, tree and asset digests; requires the project's own counts (88 replay records, run attempt 1, distinct run and asset ids) and the fixed historical tag targets; parses timestamps as real calendar dates, round-trips them, and requires the build to precede the attestation; rebuilds the checksum companion bytes and compares them; takes every builder fact from the record rather than from a hand-written file. It measures nothing itself and cannot describe its own upload.",
+    "record_contract": "The build record is validated as a whole document: every top-level key and every key of every nested block is named, unknown keys are refused, a boolean in a count slot is refused, a float is refused and 1e999 is refused as a non-finite number. The archive command must be the exact expected argv rather than merely containing git, archive and --format=zip. Both archive self-checks must be present and have exited 0 and not_present_in_archive must be empty; a fixture record in which check_release.py had never run was previously accepted.",
+    "release_relations": "The measured facts must be internally consistent so that an API answer from another release or another run cannot be mixed in: the repository full name, the draft's tag name and draft state, each CI run's workflow name, event, head branch and head SHA, the replay artifact's name, parent run and expiry, and each asset's canonical name and parent release id.",
+    "exit_codes": {
+      "0": "the asset was written and its durability confirmed",
+      "2": "refused before os.replace; no asset exists",
+      "3": "os.replace succeeded and a later step failed. The asset exists; its durability is unknown. This holds even when the read-back that would describe it also fails, in which case the report says the file exists and that verification was unavailable. Measured counterexamples: a failing directory fsync produced exit 2 and 'nothing published' over a complete 4,626-byte asset; adding a failing read-back produced the same wrong report over a complete 9,414-byte asset."
+    },
+    "draft_asset_inventory": "The draft Release's exact asset inventory before this document is uploaded is a measured input: count 2, the ZIP and its checksum companion in canonical order, the two recorded asset ids, no duplicates, and the attestation's own name absent. The inventory after the upload -- exactly those two plus this file -- cannot be recorded here, because a file cannot describe its own upload; it belongs to the external execution evidence and to GitHub's generated Release attestation.",
+    "commit_point_boundary": "The publication transaction spans the os.rename / os.replace call, the statement that records it, the durability fsync and the return, and in the CLI it spans the call into the builder, the success report and the return. Guarding only the syscall left the next statement and the success report outside every handler: measured with KeyboardInterrupt, SystemExit and a custom BaseException, the first produced exit 2 and 'nothing published' over a complete output, the second escaped as a traceback. Failures are classified by observing the destination, never by a flag; only a definite absence permits reporting one. SIGKILL, process crash and power loss remain uncatchable and are not claimed to be handled."
+  },
+  "candidate_scope_and_date": {
+    "changed_paths": "The release boundary is a fixed, sorted set of fourteen paths compared by set equality. Fixing only the count accepted a package in which README.md had been swapped for .github/workflows/smoke-test.yml.",
+    "candidate_date": "The candidate date is parsed as a calendar day, round-tripped, and required to be identical in CITATION.cff, the single '## 1.0.2' CHANGELOG heading and candidate_date_utc here, each read exactly once. A shape-only check accepted 2026-99-99 and a real but disagreeing date. The finalizer also requires that day to be the day it runs; the package verifier does not compare against today, so an archived package still verifies later."
+  }
 }

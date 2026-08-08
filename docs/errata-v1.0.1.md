@@ -1,8 +1,12 @@
 # Errata for v1.0.0 and v1.0.1
 
-**Status: recorded in the working tree, not yet released.** The published
-`v1.0.0` and `v1.0.1` tags, Releases and assets are unchanged. A corrective
-patch release is expected to carry these values.
+**Status: implemented on `main` by merge commit
+`2adfffb7dc68f40ea52fd1ed78bc2f11a46de78b`, and carried by the `v1.0.2`
+corrective patch release.** Whether that Release exists is answered by GitHub,
+not by this file: if GitHub reports the `v1.0.2` Release as published and
+immutable, the corrected values below are the published ones; otherwise the
+values published under `v1.0.0` and `v1.0.1` are still the ones in circulation.
+The `v1.0.0` and `v1.0.1` tags, Releases and assets are unchanged either way.
 
 This errata has two independent items:
 

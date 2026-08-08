@@ -22,7 +22,7 @@ This repository has a narrower, proof-oriented role: it supplies exact-rational 
 
 ## Canonical publication
 
-The canonical repository, latest patch Release, preserved `v1.0.0` snapshot, asset names, and checksum interpretation are recorded in `PUBLICATION_STATUS.md`.
+The canonical repository, the rule for which Release is currently canonical, the preserved `v1.0.0` snapshot, the asset names and the checksum interpretation are recorded in `PUBLICATION_STATUS.md`. A release carries two canonical distribution assets — the deterministic ZIP and its `.sha256` companion — plus a publication-attestation asset that records the measured release facts. Asset digests are resolved against the GitHub Release and that attestation asset, not against files in this tree; release titles and notes are description, not authority.
 
 This repository contains reproducible **lower-bound certificates for fixed point configurations** in the unit square. For a configuration $X=\{x_1,\ldots,x_n\}\subset[0,1]^2$,
 
@@ -84,7 +84,7 @@ certifier uses to re-check its own certificate.
 
 The full release replay executed all **88 verifiers** (44 configurations × 2 methods) from a freshly extracted copy of the public repository. Result: **88/88 returned code 0 and `CERTIFIED`**. See `evidence/full-cleanroom-replay/`.
 
-The releases reproduce and verify the certificates, not the original exploratory search process. Optimization/search code, random seeds, and complete search transcripts are not included in `v1.0.0` or `v1.0.1`.
+The releases reproduce and verify the certificates, not the original exploratory search process. Optimization/search code, random seeds, and complete search transcripts are not included in `v1.0.0`, `v1.0.1`, or `v1.0.2`. Which Release is currently canonical is resolved against GitHub, as `PUBLICATION_STATUS.md` explains.
 
 `SHA256SUMS` covers the exact certificate and reproducibility corpus defined by `MANIFEST_POLICY.json`. The complete published snapshot is protected separately by the canonical Release ZIP SHA-256. See `docs/manifest-policy.md`.
 
