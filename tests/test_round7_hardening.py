@@ -16,7 +16,18 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True
 
-from support import REPO_ROOT, copy_repository, load_json, run_script, shared_quick_replay  # noqa: E402
+from support import (  # noqa: E402
+    MINIMAL_CERTIFIER,
+    REPO_ROOT,
+    copy_repository,
+    load_json,
+    run_script,
+    shared_quick_replay,
+    write_fake_certifier,
+)
+
+from certificate_lib import CertifierSourceError, extract_certifier_facts  # noqa: E402
+from verifier_runner import proof_output_problems  # noqa: E402
 
 FULL_REPLAY = Path("evidence") / "full-cleanroom-replay" / "PUBLIC_REPO_FULL_REPLAY.json"
 
@@ -130,6 +141,76 @@ class ExpectAllRequiresEveryVerifierCertified(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout)
         self.assertIn(self.MESSAGE, result.stdout)
         self.assertIn("certified_count=9 verifier_count=10 failed_count=1", result.stdout)
+
+
+#: Shebang, a latin-1 coding cookie and a latin-1 byte. Python runs the file;
+#: reading it as UTF-8 fails.
+LATIN1_CERTIFIER = (
+    b"#!/usr/bin/env python3\n# -*- coding: latin-1 -*-\n# caf\xe9\n"
+    + MINIMAL_CERTIFIER.split("\n", 1)[1].encode("utf-8")
+)
+
+
+def _mutate(old: str, new: str) -> bytes:
+    if old not in MINIMAL_CERTIFIER:
+        raise AssertionError(f"pattern to mutate was not found: {old!r}")
+    return MINIMAL_CERTIFIER.replace(old, new, 1).encode("utf-8")
+
+
+class SourceReadingFailuresAreContained(unittest.TestCase):
+    """Only ``CertifierSourceError`` used to be contained; the rest leaked."""
+
+    MUTATIONS: dict[str, "bytes | None"] = {
+        "SyntaxError": _mutate("def max_sq_1d(", "def max_sq_1d(("),
+        "ValueError": _mutate('TARGET = Q("1.0")', 'TARGET = Q("x")'),
+        "ZeroDivisionError": _mutate('TARGET = Q("1.0")', 'TARGET = Q("1.0")\nBROKEN = Q(1, 0)'),
+        "TypeError": _mutate('TARGET = Q("1.0")', 'TARGET = Q("1.0") + "a"'),
+        "UnicodeDecodeError": LATIN1_CERTIFIER,
+        "FileNotFoundError": None,
+    }
+
+    def test_unmutated_fixture_reads(self) -> None:
+        """Positive control: the mutations, not the fixture, cause the failures."""
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "spectral.py"
+            path.write_text(MINIMAL_CERTIFIER, encoding="utf-8")
+            facts = extract_certifier_facts(path, verify_entry_point=True)
+        self.assertEqual(len(facts.lights), 1)
+
+    def test_each_failure_becomes_a_certifier_source_error(self) -> None:
+        for name, payload in self.MUTATIONS.items():
+            with self.subTest(exception=name), tempfile.TemporaryDirectory() as temporary:
+                path = Path(temporary) / "spectral.py"
+                if payload is not None:
+                    path.write_bytes(payload)
+                with self.assertRaises(CertifierSourceError) as caught:
+                    extract_certifier_facts(path, verify_entry_point=True)
+                self.assertIn(str(path), str(caught.exception))
+                self.assertIn(f"could not read certifier source: {name}", str(caught.exception))
+                self.assertEqual(type(caught.exception.__cause__).__name__, name)
+
+    def test_proof_output_problems_reports_instead_of_raising(self) -> None:
+        for name, payload in self.MUTATIONS.items():
+            with self.subTest(exception=name), tempfile.TemporaryDirectory() as temporary:
+                path = Path(temporary) / "spectral.py"
+                if payload is not None:
+                    path.write_bytes(payload)
+                problems = proof_output_problems(path, "status: CERTIFIED\n", "probe")
+                self.assertEqual(len(problems), 1, problems)
+                self.assertIn(f"could not read certifier source: {name}", problems[0])
+
+    def test_verify_one_prints_a_problem_not_a_traceback(self) -> None:
+        """The certifier itself runs and certifies; only reading its source fails."""
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = copy_repository(Path(temporary))
+            script = write_fake_certifier(repo, 7, "spectral", "")
+            script.write_bytes(LATIN1_CERTIFIER)
+            result = run_script(repo, "verify_one.py", "--n", "7", "--method", "spectral", "--timeout", "60")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("status: CERTIFIED", result.stdout)
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertIn("FAILED n=7 spectral", result.stderr)
+        self.assertIn("could not read certifier source: UnicodeDecodeError", result.stderr)
 
 
 if __name__ == "__main__":
