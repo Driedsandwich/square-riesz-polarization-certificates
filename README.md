@@ -82,6 +82,14 @@ treats as a packaging defect. The replay scripts refuse to run under `python -O`
 or `PYTHONOPTIMIZE`, because that would disable the `assert` statements each
 certifier uses to re-check its own certificate.
 
+**Do not run a certifier directly under `python -O` or `PYTHONOPTIMIZE`.** The
+certifiers for n=18, 20 and 22–52 search only the quarter square [0,1/2]^2;
+what extends the proof to the whole unit square is a pair of module-level
+`assert` statements checking reflection symmetry, and optimisation removes them.
+Run certifiers through `scripts/verify_one.py` or `scripts/verify_all.py`, which
+refuse optimised mode. See `docs/reproducibility.md`.
+
+
 The full release replay executed all **88 verifiers** (44 configurations × 2 methods) from a freshly extracted copy of the public repository. Result: **88/88 returned code 0 and `CERTIFIED`**. See `evidence/full-cleanroom-replay/`.
 
 The releases reproduce and verify the certificates, not the original exploratory search process. Optimization/search code, random seeds, and complete search transcripts are not included in `v1.0.0` or `v1.0.1`.

@@ -7,6 +7,7 @@ applied to throwaway copies; nothing writes to this repository.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -211,6 +212,47 @@ class SourceReadingFailuresAreContained(unittest.TestCase):
         self.assertNotIn("Traceback", result.stderr)
         self.assertIn("FAILED n=7 spectral", result.stderr)
         self.assertIn("could not read certifier source: UnicodeDecodeError", result.stderr)
+
+
+class ReplayScriptsRefuseOptimizedMode(unittest.TestCase):
+    """The certifiers of n18, n20 and n22-n52 prove the quarter square only.
+
+    Covering the full square rests on two module-level ``assert`` statements of
+    reflection symmetry, which ``python -O`` removes. The certifiers are frozen,
+    so the protection lives in the replay scripts, which must refuse to start —
+    before running any certifier — under either way of enabling optimisation.
+    ``verify_all.py -O`` is covered in ``test_success_contract.py``.
+    """
+
+    def run_refused(self, script: str, *, flag: bool, arguments: "tuple[str, ...]") -> None:
+        environment = dict(os.environ)
+        environment.pop("PYTHONOPTIMIZE", None)
+        command = [sys.executable, "-B"]
+        if flag:
+            command.append("-O")
+        else:
+            environment["PYTHONOPTIMIZE"] = "1"
+        result = subprocess.run(
+            [*command, str(REPO_ROOT / "scripts" / script), *arguments],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            env=environment,
+        )
+        output = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, output)
+        self.assertIn("refusing to run", output)
+        self.assertNotIn("== n=", output)
+        self.assertNotIn("status:", output)
+
+    def test_verify_one_refuses_dash_o(self) -> None:
+        self.run_refused("verify_one.py", flag=True, arguments=("--n", "22", "--method", "both"))
+
+    def test_verify_one_refuses_pythonoptimize(self) -> None:
+        self.run_refused("verify_one.py", flag=False, arguments=("--n", "22", "--method", "both"))
+
+    def test_verify_all_refuses_pythonoptimize(self) -> None:
+        self.run_refused("verify_all.py", flag=False, arguments=("--quick", "--jobs", "1"))
 
 
 if __name__ == "__main__":
