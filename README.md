@@ -89,6 +89,12 @@ what extends the proof to the whole unit square is a pair of module-level
 Run certifiers through `scripts/verify_one.py` or `scripts/verify_all.py`, which
 refuse optimised mode. See `docs/reproducibility.md`.
 
+**The upper witness value a certifier prints is not an upper bound.** The
+`witness_value_upper_bound_decimal` line (or its equivalent) and the `upper:`
+line under `rigorous_interval_for_true_minimum` are rounded to nearest, and for
+39 of the 88 certifiers they are below the exact witness value. The rigorous
+upper bound is `rigorous_upper_witness` in `data/certified-results.csv`, which is
+rounded outward; see `docs/data-schema.md`.
 
 The full release replay executed all **88 verifiers** (44 configurations × 2 methods) from a freshly extracted copy of the public repository. Result: **88/88 returned code 0 and `CERTIFIED`**. See `evidence/full-cleanroom-replay/`.
 

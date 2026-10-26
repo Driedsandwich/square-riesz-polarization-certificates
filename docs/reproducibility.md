@@ -41,6 +41,12 @@ The guard lives in the replay scripts, not in the certifiers, so it only applies
 
 For the published sources, `scripts/check_semantic_consistency.py` evaluates every module-level `assert` statically from the syntax tree (`certifier_module_assertions_evaluated`), which includes both reflection statements of each quarter-square certifier; that check does not depend on the interpreter's optimisation level. It does not cover a certifier executed by hand from a modified copy. The certifiers are frozen at v1.0.1 and are not changed here; replacing these `assert` statements with explicit checks is recorded as a proposal in [certifier-change-proposals.md](certifier-change-proposals.md).
 
+### The printed upper witness value is not an upper bound
+
+Each certifier prints the exact potential at its witness point as a decimal, on the upper witness value line (`witness_value_upper_bound_decimal` in 72 certifiers; `corner_value_upper_bound_decimal`, `upper_witness_value_decimal` or `witness_upper_bound_decimal` in the rest) and again as `upper:` under `rigorous_interval_for_true_minimum`. Both are produced by `Decimal` division at the certifier's precision, which rounds **to nearest** (half-to-even). For 39 of the 88 certifiers that decimal is below the exact value, so despite the line names it is not an upper bound and the printed interval is not a rigorous enclosure. Each certifier's own closing check compares the exact rational value, not the decimal, so the certificates themselves are unaffected.
+
+The rigorous upper bound is `rigorous_upper_witness` in `data/certified-results.csv` and `.json`, rounded outward; see [data-schema.md](data-schema.md). The replay validators deliberately check the printed value against the same to-nearest rendering (`certificate_lib.certifier_decimal_string`), because that is what the frozen certifiers and the stored logs contain.
+
 ## Semantic checks
 
 Beyond file counts and hashes, the following verify that every representation of the corpus says the same thing:

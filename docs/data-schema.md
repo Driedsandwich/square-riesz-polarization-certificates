@@ -73,6 +73,13 @@ is below 5 it produces a decimal below the exact value, which is then not an
 upper bound at all. That is what happened in v1.0.0 and v1.0.1, in 18 of the 44
 rows — see [errata-v1.0.1.md](errata-v1.0.1.md).
 
+The certifiers' own standard output was not corrected and still rounds to
+nearest: the `witness_value_upper_bound_decimal` line (or its equivalent) and
+the `upper:` line under `rigorous_interval_for_true_minimum` are below the exact
+value for 39 of the 88 certifiers. Those printed values are not upper bounds;
+use `rigorous_upper_witness`. See
+[reproducibility.md](reproducibility.md#the-printed-upper-witness-value-is-not-an-upper-bound).
+
 ### Decimal places
 
 `d` is recorded per row in `data/results-metadata.json` as
