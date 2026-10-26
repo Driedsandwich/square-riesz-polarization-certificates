@@ -7,6 +7,8 @@ applied to throwaway copies; nothing writes to this repository.
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -14,7 +16,7 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True
 
-from support import copy_repository, load_json, run_script  # noqa: E402
+from support import REPO_ROOT, copy_repository, load_json, run_script, shared_quick_replay  # noqa: E402
 
 FULL_REPLAY = Path("evidence") / "full-cleanroom-replay" / "PUBLIC_REPO_FULL_REPLAY.json"
 
@@ -85,6 +87,49 @@ class CheckReleaseReadsEveryRecord(unittest.TestCase):
         self.assertEqual(code, 1, output)
         self.assertIn("has 87 records, expected 88", output)
         self.assertIn("no replay record for", output)
+
+
+class ExpectAllRequiresEveryVerifierCertified(unittest.TestCase):
+    """``--expect-all`` accepted a summary with nine successes and one failure.
+
+    The shared fixture is a quick replay, so ``--expect-all`` already rejects it
+    for its selection and key set. These tests therefore look for the specific
+    message of the count check, not just a non-zero exit: it must be absent for
+    the untouched fixture and present once a failure is recorded.
+    """
+
+    MESSAGE = "--expect-all requires every verifier to be certified"
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        _, cls.replay = shared_quick_replay()
+
+    def validate(self, replay: Path) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [sys.executable, "-B", str(REPO_ROOT / "scripts" / "validate_replay_output.py"), str(replay), "--expect-all"],
+            capture_output=True,
+            text=True,
+            timeout=900,
+        )
+
+    def test_all_certified_fixture_does_not_trip_the_count_check(self) -> None:
+        result = self.validate(self.replay)
+        self.assertNotIn(self.MESSAGE, result.stdout)
+        self.assertIn("all_certified_verified=1", result.stdout)
+
+    def test_one_failure_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            copy = Path(directory) / "replay"
+            shutil.copytree(self.replay, copy)
+            summary = load_json(copy / "summary.json")
+            summary["results"][0]["certified"] = False
+            summary["certified_count"] = summary["verifier_count"] - 1
+            summary["failed_count"] = 1
+            (copy / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+            result = self.validate(copy)
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn(self.MESSAGE, result.stdout)
+        self.assertIn("certified_count=9 verifier_count=10 failed_count=1", result.stdout)
 
 
 if __name__ == "__main__":
