@@ -228,7 +228,7 @@ flowchart TD
 
 ### 4.5 GitHub 上での自動実行
 
-`.github/workflows/smoke-test.yml` と `.github/workflows/full-replay.yml` は、どちらも最初に `check_frozen_corpus.py` を実行し、そのあと単体テスト・各検査を行います。違いは最後の手順で、前者は `--quick`（5 つの `n`、10 本）、後者は 88 本すべてを実行してから `validate_replay_output.py` で判定します。全履歴とタグが必要なため `fetch-depth: 0` で取得しています（根拠: `.github/workflows/smoke-test.yml:18-53`、`.github/workflows/full-replay.yml:94-153`）。
+`.github/workflows/smoke-test.yml` と `.github/workflows/full-replay.yml` は、どちらも最初に `check_frozen_corpus.py` を実行し、そのあと単体テスト・各検査を行います。違いは最後の手順で、前者は `--quick`（5 つの `n`、10 本）、後者は 88 本すべてを実行してから `validate_replay_output.py` で判定します。全履歴とタグが必要なため `fetch-depth: 0` で取得しています（根拠: `.github/workflows/smoke-test.yml:18-53`、`.github/workflows/full-replay.yml:41-101`）。
 
 ## 5. 手元で実際に動かした結果
 
