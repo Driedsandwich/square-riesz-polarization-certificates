@@ -466,25 +466,36 @@ class AtomicPublication(unittest.TestCase):
         self.assertFalse(self.out.exists())
 
     def test_staging_is_a_sibling_of_the_destination(self) -> None:
-        """A cross-filesystem staging directory would make the rename non-atomic."""
+        """A cross-filesystem staging directory would make the rename non-atomic.
+
+        An earlier version patched ``tempfile.mkdtemp`` and then ran the builder
+        in a subprocess, which the patch never reached; it collected the calls
+        and asserted nothing about them, so it passed against a builder that
+        staged in the system temp directory. The builder now runs in this
+        process and the publishing rename itself is observed.
+        """
         commit = build_fixture_repository(self.repo)
-        seen: list[str] = []
-        real_mkdtemp = builder.tempfile.mkdtemp
+        renames: list[tuple[Path, Path]] = []
+        real_rename = builder.os.rename
 
-        def watching(*a, **k):
-            path = real_mkdtemp(*a, **k)
-            seen.append(k.get("dir") or (a[2] if len(a) > 2 else None))
-            return path
+        def watching(source, destination):
+            renames.append((Path(source), Path(destination)))
+            return real_rename(source, destination)
 
-        builder.tempfile.mkdtemp = watching
+        builder.os.rename = watching
         try:
-            run_builder(self.repo, self.out, target=commit)
+            code = builder.main(["--version", VERSION, "--target", commit,
+                                 "--output-dir", str(self.out), "--repository", str(self.repo)])
         finally:
-            builder.tempfile.mkdtemp = real_mkdtemp
-        # The in-process call is the verification scratch; assert the published
-        # directory landed beside the destination instead.
-        self.assertTrue(self.out.exists())
-        self.assertEqual(self.out.parent, self.scratch)
+            builder.os.rename = real_rename
+        self.assertEqual(code, builder.EXIT_OK)
+        published = [(source, destination) for source, destination in renames
+                     if destination == self.out]
+        self.assertEqual(len(published), 1, renames)
+        source, _ = published[0]
+        self.assertEqual(source.parent, self.out.parent)
+        self.assertTrue(source.name.startswith(".out.staging-"), source)
+        self.assertEqual(sorted(p.name for p in self.out.iterdir()), EXPECTED_OUTPUT)
 
 
 class ExpectedDigestGate(unittest.TestCase):
@@ -691,6 +702,24 @@ class PublicBuildRecordPrivacy(unittest.TestCase):
 
     def test_the_path_detector_is_not_vacuous(self) -> None:
         self.assertTrue(builder.find_absolute_paths({"repository": "/private/tmp/x"}))
+
+    def test_the_path_detector_reads_every_depth_and_spelling(self) -> None:
+        """It used to look only at the start of each value."""
+        for value in ({"a": {"b": ["/home/someone/repository"]}},
+                      {"stdout_tail": ["verification_root=/tmp/release-asset-verify-x/r"]},
+                      {"note": "built in /Users/someone/work"},
+                      {"path": "C:\\Users\\someone"}, {"path": "c:/users/someone"},
+                      {"path": "\\\\server\\share"}, {"path": "~/work"},
+                      {"/home/someone": "a path as a key"}):
+            with self.subTest(value=value):
+                self.assertTrue(builder.find_absolute_paths(value))
+        for value in ({"url": "https://github.com/example/repository"},
+                      {"tail": "certified_rows=44 replay=88/88 issues=0"},
+                      {"prefix": "--prefix=square-riesz-polarization-certificates-v1.0.2/"},
+                      {"argv": ["git", "-c", "core.attributesFile=/dev/null"]},
+                      {"script": "scripts/check_release.py"}):
+            with self.subTest(value=value):
+                self.assertEqual(builder.find_absolute_paths(value), [])
 
 
 class ReleaseDocumentWording(unittest.TestCase):
@@ -1435,14 +1464,40 @@ class ArchiveSelfChecks(unittest.TestCase):
         self.assertIn("check_release.py failed inside the extracted archive", completed.stderr)
         self.assertFalse(self.out.exists())
 
-    def test_an_absent_optional_check_is_recorded_rather_than_ignored(self) -> None:
-        """The builder records the gap; the attestation is what refuses it."""
+    def test_an_absent_check_refuses_the_build(self) -> None:
+        """Every shipped self-check is mandatory.
+
+        This test used to assert the opposite: an archive without
+        ``check_release.py`` was built, the gap recorded, and the refusal left to
+        the attestation, by which time the ZIP sat in the output directory.
+        """
         commit = build_fixture_repository(self.repo, check_release=None)
+        completed = run_builder(self.repo, self.out, target=commit)
+        self.assertEqual(completed.returncode, builder.EXIT_REFUSED, completed.stderr)
+        self.assertIn("extracted archive has no scripts/check_release.py", completed.stderr)
+        self.assertFalse(self.out.exists())
+
+    def test_a_check_that_prints_free_text_refuses_the_build(self) -> None:
+        """Only a counter summary may reach the public record.
+
+        A self-check that printed its working directory put the extracted
+        archive's temporary path into ``stdout_tail``, and the build passed.
+        """
+        leaking = CHECK_RELEASE_STANDIN + 'print(f"verification_root={root}")\n'
+        commit = build_fixture_repository(self.repo, check_release=leaking)
+        completed = run_builder(self.repo, self.out, target=commit)
+        self.assertEqual(completed.returncode, builder.EXIT_REFUSED, completed.stderr)
+        self.assertIn("ended its output with", completed.stderr)
+        self.assertFalse(self.out.exists())
+
+    def test_every_recorded_tail_is_a_counter_summary(self) -> None:
+        commit = build_fixture_repository(self.repo)
         self.assertEqual(run_builder(self.repo, self.out, target=commit).returncode,
                          builder.EXIT_OK)
-        verification = record_of(self.out)["archive_self_verification"]
-        self.assertEqual(verification["not_present_in_archive"], ["check_release.py"])
-        self.assertNotIn("check_release.py", verification["ran"])
+        for script, result in record_of(self.out)["archive_self_verification"]["ran"].items():
+            with self.subTest(script=script):
+                self.assertEqual(len(result["stdout_tail"]), 1)
+                self.assertRegex(result["stdout_tail"][0], builder.SELF_CHECK_SUMMARY)
 
 
 if __name__ == "__main__":

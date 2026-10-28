@@ -424,6 +424,26 @@ def validate_proof_output(
         except ValueError as error:
             problems.append(str(error))
 
+    # Each counter was checked on its own, so splits=0 with leaf_count=2 and
+    # maximum_depth=999999 passed. Every certifier bisects: a split replaces one
+    # box by two, so a finished run has exactly one more leaf than splits, and a
+    # binary tree with that many leaves is at least ceil(log2(leaves)) deep and
+    # at most one level deeper per split. This ties the three numbers to one
+    # tree; it cannot detect a set of numbers that is consistent and false.
+    if len(counts) == 3:
+        splits, leaves, depth = counts["splits"], counts["leaf_count"], counts["maximum_depth"]
+        if leaves != splits + 1:
+            problems.append(
+                f"{where}: leaf_count={leaves} with splits={splits}; a bisection that splits "
+                f"{splits} times ends with {splits + 1} leaves"
+            )
+        elif not (leaves - 1).bit_length() <= depth <= splits:
+            problems.append(
+                f"{where}: maximum_depth={depth} is impossible for a binary tree with "
+                f"{leaves} leaves after {splits} splits; it must lie in "
+                f"[{(leaves - 1).bit_length()}, {splits}]"
+            )
+
     if "minimum_leaf_lower_bound_decimal" in fields:
         try:
             bound = parse_exact_decimal(fields["minimum_leaf_lower_bound_decimal"])
