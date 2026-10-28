@@ -1675,7 +1675,25 @@ def extract_certifier_facts(path: Path, *, verify_entry_point: bool = False) -> 
     proof before printing a status. It is off by default so that constant
     extraction stays independent of the entry-point policy, and on wherever a
     check is claiming that the source is sound.
+
+    Reading a mutated or damaged source can fail in ways the allow-list never
+    sees: a syntax error, undecodable bytes, a missing file, or an exception
+    raised while evaluating an allow-listed expression such as ``Q(1, 0)``.
+    Every such failure is reported as a ``CertifierSourceError`` naming the
+    file, so callers that catch it turn it into a problem report instead of a
+    traceback.
     """
+    try:
+        return _extract_certifier_facts(path, verify_entry_point=verify_entry_point)
+    except (CertifierSourceError, EntryPointError):
+        raise
+    except Exception as error:  # noqa: BLE001 - converted, never swallowed
+        raise CertifierSourceError(
+            f"{path}: could not read certifier source: {type(error).__name__}: {error}"
+        ) from error
+
+
+def _extract_certifier_facts(path: Path, *, verify_entry_point: bool) -> CertifierFacts:
     reader = _CertifierReader(path)
     reader.load()
     if verify_entry_point:
