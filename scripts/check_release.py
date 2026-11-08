@@ -179,7 +179,7 @@ CANONICAL_ZIP='square-riesz-polarization-certificates-v1.0.2.zip'
 CANONICAL_ATTESTATION='square-riesz-polarization-certificates-v1.0.2.publication-attestation.json'
 FROZEN_ANCHOR_COMMIT='d92992101ca45a5cd755b8d962652ab7e4329973'
 CANDIDATE_BASE_COMMIT='2adfffb7dc68f40ea52fd1ed78bc2f11a46de78b'
-MERGE_FIRST_PARENT_PIN='2146eba2e3cf8ac7dd873365856b58c5cee0d362'
+MERGE_FIRST_PARENT_PIN='4a8eb084eafb099952b3b9efb799e1208e74302e'
 # The exact text verification_contract must carry. A field pinned to its own
 # literal cannot grow a measured count in the middle of a sentence, which is
 # what a type-only rule allowed.

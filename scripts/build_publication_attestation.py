@@ -104,8 +104,9 @@ V1_0_0_TARGET = "2f01c00693a1304b063077238d4e86ba7fae9744"
 V1_0_1_TARGET = "d92992101ca45a5cd755b8d962652ab7e4329973"
 AUDIT_BRANCH_TARGET = "b57c436bdcdec2e7770f49345255a93c373c44c2"
 # The v1.0.2 publication merge is the date-semantics follow-up. Its first
-# parent is the already-audited release-prep merge currently on main.
-MERGE_FIRST_PARENT = "2146eba2e3cf8ac7dd873365856b58c5cee0d362"
+# parent is the merge of the verification-gate fixes (pull request #14),
+# which sits on main on top of the release-prep merge 2146eba.
+MERGE_FIRST_PARENT = "4a8eb084eafb099952b3b9efb799e1208e74302e"
 EXPECTED_REPLAY_COUNT = 88
 EXPECTED_RUN_ATTEMPT = 1
 

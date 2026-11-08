@@ -12,7 +12,7 @@
   "internal_manifest": {
     "policy": "MANIFEST_POLICY.json",
     "entry_count": 570,
-    "sha256": "bf7f13bd0009fc68bc020cdf6a7e9d00468fcbf4278d543ba0f2d997ff66f3d3",
+    "sha256": "90ad6ae3f91648753644465ba7794d4e4582c09fd644b045293ca98edbac6b0d",
     "note": "This file is outside the manifest policy, so recording the manifest digest here is not circular."
   },
   "verification_contract": {
@@ -215,11 +215,11 @@
     "publication_date": "CITATION.cff date-released and the single '## 1.0.2' CHANGELOG heading are release-date metadata. They must equal each other and the actual UTC date on which v1.0.2 is published. The publication operator checks this immediately before the irreversible tag write and again immediately before publishing. An archived package verifier checks the recorded internal relation and does not compare an old package with its current wall clock."
   },
   "release_engineering_remediation": {
-    "date_utc": "2026-08-12",
-    "base_commit": "2146eba2e3cf8ac7dd873365856b58c5cee0d362",
+    "date_utc": "2026-11-08",
+    "base_commit": "4a8eb084eafb099952b3b9efb799e1208e74302e",
     "scope": "Release-engineering-only follow-up after the substantive candidate audit; no mathematical corpus, result table, certifier, configuration or historical evidence changed.",
-    "finding": "The publication-attestation generator still pinned merge_parent_base to 2adfffb7dc68f40ea52fd1ed78bc2f11a46de78b. A publication-date follow-up merge has first parent 2146eba2e3cf8ac7dd873365856b58c5cee0d362, so the released generator would have rejected the real merge after the irreversible tag and distribution-asset uploads.",
-    "merge_first_parent_pin": "2146eba2e3cf8ac7dd873365856b58c5cee0d362",
+    "finding": "The publication-attestation generator still pinned merge_parent_base to 2adfffb7dc68f40ea52fd1ed78bc2f11a46de78b, and the August 2026 candidate re-pinned it to 2146eba2e3cf8ac7dd873365856b58c5cee0d362, the release-prep merge. The verification-gate fixes were then merged on top of 2146eba2e3cf8ac7dd873365856b58c5cee0d362 as 4a8eb084eafb099952b3b9efb799e1208e74302e, so a publication-date follow-up merge has first parent 4a8eb084eafb099952b3b9efb799e1208e74302e; either earlier pin would have rejected the real merge after the irreversible tag and distribution-asset uploads.",
+    "merge_first_parent_pin": "4a8eb084eafb099952b3b9efb799e1208e74302e",
     "obsolete_pin_refused": "2adfffb7dc68f40ea52fd1ed78bc2f11a46de78b",
     "candidate_date_note": "candidate_date_utc remains 2026-08-08 because it records the substantive candidate audit. This later release-engineering remediation is recorded separately and does not redefine the publication date.",
     "manifest_binding": {
