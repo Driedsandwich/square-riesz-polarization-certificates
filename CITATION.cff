@@ -3,7 +3,7 @@ message: "If you use the software certifiers, please cite this software release.
 title: "Certified lower bounds for unit-square Riesz 2-polarization"
 type: software
 version: "1.0.2"
-date-released: "2026-08-08"
+date-released: "2026-08-12"
 authors:
   - family-names: "Kishimoto"
     given-names: "Satoshi"

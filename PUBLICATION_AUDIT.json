@@ -1,52 +1,89 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "release_version": "1.0.2",
   "audit_type": "static_release_candidate",
   "status": "PASS_LOCAL_CANDIDATE_NOT_PUBLICATION_ATTESTATION",
-  "what_this_file_is": "A record of what could be checked about this release candidate before the commit containing this file existed. It is not evidence that anything was published.",
-  "what_this_file_cannot_contain": "The final merge commit, the tag target, the post-merge CI run identifiers, the release artifact digest, the Release and asset identifiers, and the canonical ZIP digest. Each of those comes into existence after the commit that would have to carry it, and writing a CI result into a commit changes that commit and invalidates the record. They are attested by a separate publication-attestation asset uploaded to the draft Release before publication, not by this file and not by the release notes.",
+  "what_this_file_is": "A record of what could be checked about this release candidate before the commit containing this file existed, and of what must be checked before it is published. It states requirements and fixed identities only. It is not evidence that anything was run, and it is not evidence that anything was published.",
+  "what_this_file_cannot_contain": "The final merge commit, the tag target, the post-merge CI run identifiers, the release artifact digest, the Release and asset identifiers, and the canonical ZIP digest. Each of those comes into existence after the commit that would have to carry it, and writing a CI result into a commit changes that commit and invalidates the record. They are attested by a separate publication-attestation asset uploaded to the draft Release before publication, not by this file and not by the release notes. For the same reason this file carries no measured outcome of its own verification: a count of passing checks describes a run, not this document, and nothing that reads this file can confirm it. Those live in the external execution evidence.",
   "candidate_date_utc": "2026-08-08",
   "candidate_base_commit": "2adfffb7dc68f40ea52fd1ed78bc2f11a46de78b",
   "frozen_anchor_commit": "d92992101ca45a5cd755b8d962652ab7e4329973",
   "frozen_anchor_version": "v1.0.1",
   "internal_manifest": {
     "policy": "MANIFEST_POLICY.json",
-    "entry_count": 568,
-    "sha256": "09125bc8a0a985c93e8ce33bb91eb570146f4c0f02726f9aaf74cb39a4e9d3e6",
+    "entry_count": 570,
+    "sha256": "bf7f13bd0009fc68bc020cdf6a7e9d00468fcbf4278d543ba0f2d997ff66f3d3",
     "note": "This file is outside the manifest policy, so recording the manifest digest here is not circular."
   },
-  "local_candidate_replay": {
-    "scope": "local working tree, not a release commit",
-    "source_git_commit": "2adfffb7dc68f40ea52fd1ed78bc2f11a46de78b",
-    "source_git_dirty": true,
-    "verifiers": 88,
-    "certified": 88,
-    "failed": 0,
-    "timed_out": 0,
-    "validator_problems": 0,
-    "python_version": "3.13.14",
-    "note": "source_git_dirty is true because the candidate is an uncommitted working tree. This run therefore does not describe any commit, and must not be presented as the release replay. The release replay is the post-merge run on main, validated with --expect-source-clean."
-  },
-  "static_checks": {
-    "frozen_corpus_files_agreeing": 531,
-    "frozen_corpus_git_anchor": "verified",
-    "configurations": 44,
-    "upper_witness_rows_below_exact": 0,
-    "upper_witness_rows_at_or_above_exact": 44,
-    "manifest_missing": 0,
-    "manifest_bad_hash": 0,
-    "unit_tests": 470
-  },
-  "changes_from_v1.0.1": {
-    "fixed_configurations_changed": false,
-    "certified_lower_bounds_changed": false,
-    "certifier_sources_changed": false,
-    "witness_points_changed": false,
-    "historical_replay_evidence_changed": false,
-    "upper_witness_decimal_corrections": 18,
-    "interval_width_corrections": 18,
-    "provenance_text_corrections": 2,
-    "derivation": "Diff of data/certified-results.json at v1.0.1 against this tree: 44 configurations with an identical key set; rigorous_upper_witness and interval_width differ on exactly n = 8, 15, 18, 19, 20, 24, 26, 27, 29, 30, 32, 35, 36, 39, 43, 45, 46, 47; symmetry_or_family differs on n = 15 and n = 16; certified_lower_bound differs nowhere. Each of the 18 corrections is exactly +1 in the final published digit."
+  "verification_contract": {
+    "verification_contract_version": "1",
+    "what_this_is": "The checks that must be run against this candidate and the condition each one must meet. It records no result. Whether they passed is a measurement, and a measurement of a working tree cannot be stated by a file inside that tree without changing it.",
+    "where_the_results_live": "The external execution evidence carries the raw log of every command below and a machine-readable summary derived from those logs. Release-time facts are carried by the publication-attestation asset and by GitHub's generated release attestation.",
+    "why_no_counts_here": "A count written here is not checked by anything that runs. Recording verifiers, certified corpus files, configurations or unit tests in this file produced numbers that stayed true only until the next change, and every gate accepted them once they were wrong. The commands below already fail closed on the conditions those numbers were standing in for.",
+    "required_python": "3.13",
+    "commands": [
+      {
+        "command": "python3 -B -m unittest discover -s tests -v",
+        "success": "exit 0 with no failure, error or unexpected success"
+      },
+      {
+        "command": "python3 -B scripts/check_frozen_corpus.py --expect-base-version v1.0.1 --expect-base-commit d92992101ca45a5cd755b8d962652ab7e4329973 --require-git-anchor",
+        "success": "exit 0; every frozen-corpus path agrees with the anchored blob in file type, Git mode and content, and the anchor is verified rather than reported unverifiable"
+      },
+      {
+        "command": "python3 -B scripts/verify_manifest.py",
+        "success": "exit 0 with no missing, unexpected or bad-hash entry"
+      },
+      {
+        "command": "python3 -B scripts/check_release.py",
+        "success": "exit 0 with no issue reported"
+      },
+      {
+        "command": "python3 -B scripts/check_semantic_consistency.py",
+        "success": "exit 0 with no problem reported"
+      },
+      {
+        "command": "python3 -B scripts/regenerate_certified_results.py --check",
+        "success": "exit 0 with no difference between the regenerated and the committed tables"
+      },
+      {
+        "command": "python3 -B scripts/audit_upper_witness.py --quiet",
+        "success": "exit 0 with no published decimal below the exact potential at its witness point"
+      },
+      {
+        "command": "python3 -B scripts/verify_one.py --n 15 --method both",
+        "success": "exit 0 and both methods certify"
+      },
+      {
+        "command": "python3 -B scripts/verify_all.py --quick --jobs 2",
+        "success": "exit 0 and every verifier in the quick set certifies"
+      },
+      {
+        "command": "python3 -B scripts/verify_all.py --all --jobs 2 --output-dir <SCRATCH>",
+        "success": "exit 0; the discovered configurations equal the published set exactly and every verifier certifies with none failed and none timed out"
+      },
+      {
+        "command": "python3 -B scripts/validate_replay_output.py <SCRATCH> --expect-all",
+        "success": "exit 0 with no problem reported and the full expected file inventory present"
+      },
+      {
+        "command": "git --no-replace-objects diff --check",
+        "success": "exit 0 with no whitespace error"
+      }
+    ],
+    "outcomes_that_must_not_appear_here": [
+      "source_git_dirty",
+      "source_git_clean",
+      "verifiers",
+      "certified",
+      "failed",
+      "timed_out",
+      "validator_problems",
+      "unit_tests",
+      "run, artifact, Release and asset identifiers",
+      "measured digests and measured timestamps"
+    ],
+    "enforced_by": "scripts/check_release.py"
   },
   "dynamic_publication_attestation": {
     "location": "release asset square-riesz-polarization-certificates-v1.0.2.publication-attestation.json, uploaded to the draft Release before publication",
@@ -173,7 +210,24 @@
     "commit_point_boundary": "The publication transaction spans the os.rename / os.replace call, the statement that records it, the durability fsync and the return, and in the CLI it spans the call into the builder, the success report and the return. Guarding only the syscall left the next statement and the success report outside every handler: measured with KeyboardInterrupt, SystemExit and a custom BaseException, the first produced exit 2 and 'nothing published' over a complete output, the second escaped as a traceback. Failures are classified by observing the destination, never by a flag; only a definite absence permits reporting one. SIGKILL, process crash and power loss remain uncatchable and are not claimed to be handled."
   },
   "candidate_scope_and_date": {
-    "changed_paths": "The release boundary is a fixed, sorted set of fourteen paths compared by set equality. Fixing only the count accepted a package in which README.md had been swapped for .github/workflows/smoke-test.yml.",
-    "candidate_date": "The candidate date is parsed as a calendar day, round-tripped, and required to be identical in CITATION.cff, the single '## 1.0.2' CHANGELOG heading and candidate_date_utc here, each read exactly once. A shape-only check accepted 2026-99-99 and a real but disagreeing date. The finalizer also requires that day to be the day it runs; the package verifier does not compare against today, so an archived package still verifies later."
+    "changed_paths": "Two boundaries, and they are not the same one. The original v1.0.2 release-prep scope was a fixed, sorted set of fourteen paths compared by set equality; fixing only the count had accepted a package in which README.md was swapped for .github/workflows/smoke-test.yml. The current assurance follow-up is measured against live main and is exactly eight paths: CHANGELOG.md, CITATION.cff, PUBLICATION_AUDIT.json, SHA256SUMS, scripts/build_publication_attestation.py, scripts/check_release.py, tests/test_publication_attestation.py and tests/test_release_assets.py. The eight are recomputed from an inventory of the published tree rather than read from anything this candidate wrote about itself.",
+    "candidate_date": "candidate_date_utc records the UTC day on which the substantive v1.0.2 release candidate and its full local audit were completed: 2026-08-08. It is parsed as a real calendar day and round-tripped, but it is a historical candidate-preparation date, not the publication date, and is not required to equal CITATION.cff date-released or the CHANGELOG release heading. A shape-only check had accepted 2026-99-99; impossible dates remain refused.",
+    "publication_date": "CITATION.cff date-released and the single '## 1.0.2' CHANGELOG heading are release-date metadata. They must equal each other and the actual UTC date on which v1.0.2 is published. The publication operator checks this immediately before the irreversible tag write and again immediately before publishing. An archived package verifier checks the recorded internal relation and does not compare an old package with its current wall clock."
+  },
+  "release_engineering_remediation": {
+    "date_utc": "2026-08-12",
+    "base_commit": "2146eba2e3cf8ac7dd873365856b58c5cee0d362",
+    "scope": "Release-engineering-only follow-up after the substantive candidate audit; no mathematical corpus, result table, certifier, configuration or historical evidence changed.",
+    "finding": "The publication-attestation generator still pinned merge_parent_base to 2adfffb7dc68f40ea52fd1ed78bc2f11a46de78b. A publication-date follow-up merge has first parent 2146eba2e3cf8ac7dd873365856b58c5cee0d362, so the released generator would have rejected the real merge after the irreversible tag and distribution-asset uploads.",
+    "merge_first_parent_pin": "2146eba2e3cf8ac7dd873365856b58c5cee0d362",
+    "obsolete_pin_refused": "2adfffb7dc68f40ea52fd1ed78bc2f11a46de78b",
+    "candidate_date_note": "candidate_date_utc remains 2026-08-08 because it records the substantive candidate audit. This later release-engineering remediation is recorded separately and does not redefine the publication date.",
+    "manifest_binding": {
+      "authoritative_field": "internal_manifest.sha256",
+      "carrier_scope": "all_release_paths_file_bytes_and_decoded_json_keys_and_strings",
+      "digest_text_equivalence": "case_insensitive_hex",
+      "duplicate_current_digest_fields": "forbidden",
+      "production_gate": "scripts/check_release.py"
+    }
   }
 }

@@ -21,10 +21,12 @@ from __future__ import annotations
 
 import ast
 import contextlib
+import copy
 import hashlib
 import io
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -33,7 +35,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from support import REPO_ROOT, SCRIPTS  # noqa: E402
+from support import REPO_ROOT, SCRIPTS, copy_repository  # noqa: E402
 
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
@@ -41,10 +43,187 @@ if str(SCRIPTS) not in sys.path:
 import build_publication_attestation as attestation  # noqa: E402
 
 GENERATOR = SCRIPTS / "build_publication_attestation.py"
+CHECK_RELEASE = SCRIPTS / "check_release.py"
+
+#: What each leaf of PUBLICATION_AUDIT.json is meant to be, written here and
+#: maintained here rather than read out of the gate's own AUDIT_SCHEMA. Deriving
+#: the classification from the schema made the coverage report agree with the
+#: gate by construction: a normative field quietly demoted to a free-text slot
+#: was reported as prose and the measurement agreed, and nothing objected.
+#: PINNED -- the gate must refuse a falsified value and a deletion.
+#: RECOMPUTED -- the gate recomputes it from the tree.
+#: PROSE -- explanatory English; the gate fixes its type, not its wording.
+#: PROSE_LIST_ITEM -- an item of a descriptive inventory whose membership is open.
+EXPECTED_CLAIM_CLASSIFICATION = {
+    "schema_version": "PINNED",
+    "release_version": "PINNED",
+    "audit_type": "PINNED",
+    "status": "PINNED",
+    "what_this_file_is": "PROSE",
+    "what_this_file_cannot_contain": "PROSE",
+    "candidate_date_utc": "PINNED",
+    "candidate_base_commit": "PINNED",
+    "frozen_anchor_commit": "PINNED",
+    "frozen_anchor_version": "PINNED",
+    "internal_manifest.policy": "PINNED",
+    "internal_manifest.entry_count": "RECOMPUTED",
+    "internal_manifest.sha256": "RECOMPUTED",
+    "internal_manifest.note": "PROSE",
+    "verification_contract.verification_contract_version": "PINNED",
+    "verification_contract.what_this_is": "PINNED",
+    "verification_contract.where_the_results_live": "PINNED",
+    "verification_contract.why_no_counts_here": "PINNED",
+    "verification_contract.required_python": "PINNED",
+    "verification_contract.commands.0.command": "PINNED",
+    "verification_contract.commands.0.success": "PINNED",
+    "verification_contract.commands.1.command": "PINNED",
+    "verification_contract.commands.1.success": "PINNED",
+    "verification_contract.commands.2.command": "PINNED",
+    "verification_contract.commands.2.success": "PINNED",
+    "verification_contract.commands.3.command": "PINNED",
+    "verification_contract.commands.3.success": "PINNED",
+    "verification_contract.commands.4.command": "PINNED",
+    "verification_contract.commands.4.success": "PINNED",
+    "verification_contract.commands.5.command": "PINNED",
+    "verification_contract.commands.5.success": "PINNED",
+    "verification_contract.commands.6.command": "PINNED",
+    "verification_contract.commands.6.success": "PINNED",
+    "verification_contract.commands.7.command": "PINNED",
+    "verification_contract.commands.7.success": "PINNED",
+    "verification_contract.commands.8.command": "PINNED",
+    "verification_contract.commands.8.success": "PINNED",
+    "verification_contract.commands.9.command": "PINNED",
+    "verification_contract.commands.9.success": "PINNED",
+    "verification_contract.commands.10.command": "PINNED",
+    "verification_contract.commands.10.success": "PINNED",
+    "verification_contract.commands.11.command": "PINNED",
+    "verification_contract.commands.11.success": "PINNED",
+    "verification_contract.outcomes_that_must_not_appear_here.0": "PINNED",
+    "verification_contract.outcomes_that_must_not_appear_here.1": "PINNED",
+    "verification_contract.outcomes_that_must_not_appear_here.2": "PINNED",
+    "verification_contract.outcomes_that_must_not_appear_here.3": "PINNED",
+    "verification_contract.outcomes_that_must_not_appear_here.4": "PINNED",
+    "verification_contract.outcomes_that_must_not_appear_here.5": "PINNED",
+    "verification_contract.outcomes_that_must_not_appear_here.6": "PINNED",
+    "verification_contract.outcomes_that_must_not_appear_here.7": "PINNED",
+    "verification_contract.outcomes_that_must_not_appear_here.8": "PINNED",
+    "verification_contract.outcomes_that_must_not_appear_here.9": "PINNED",
+    "verification_contract.enforced_by": "PINNED",
+    "dynamic_publication_attestation.location": "PROSE",
+    "dynamic_publication_attestation.generator": "PINNED",
+    "dynamic_publication_attestation.embedded_in_source_tree": "PINNED",
+    "dynamic_publication_attestation.not_the_release_body": "PROSE",
+    "dynamic_publication_attestation.reason": "PROSE",
+    "dynamic_publication_attestation.fields_recorded_there.0": "PROSE_LIST_ITEM",
+    "dynamic_publication_attestation.fields_recorded_there.1": "PROSE_LIST_ITEM",
+    "dynamic_publication_attestation.fields_recorded_there.2": "PROSE_LIST_ITEM",
+    "dynamic_publication_attestation.fields_recorded_there.3": "PROSE_LIST_ITEM",
+    "dynamic_publication_attestation.fields_recorded_there.4": "PROSE_LIST_ITEM",
+    "dynamic_publication_attestation.fields_recorded_there.5": "PROSE_LIST_ITEM",
+    "dynamic_publication_attestation.fields_recorded_there.6": "PROSE_LIST_ITEM",
+    "dynamic_publication_attestation.fields_recorded_there.7": "PROSE_LIST_ITEM",
+    "dynamic_publication_attestation.fields_recorded_there.8": "PROSE_LIST_ITEM",
+    "dynamic_publication_attestation.fields_recorded_there.9": "PROSE_LIST_ITEM",
+    "dynamic_publication_attestation.fields_recorded_there.10": "PROSE_LIST_ITEM",
+    "dynamic_publication_attestation.not_recordable_even_there": "PROSE",
+    "dynamic_publication_attestation.release_assets.distribution.0": "PINNED",
+    "dynamic_publication_attestation.release_assets.distribution.1": "PINNED",
+    "dynamic_publication_attestation.release_assets.auxiliary_integrity.0": "PINNED",
+    "dynamic_publication_attestation.build_record_embedded": "PINNED",
+    "dynamic_publication_attestation.build_record_preimage": "PROSE",
+    "canonical_asset_builder.path": "PINNED",
+    "canonical_asset_builder.tests": "PINNED",
+    "canonical_asset_builder.generation_semantics": "PROSE",
+    "canonical_asset_builder.exact_tag_binding": "PROSE",
+    "canonical_asset_builder.archive_equals_tree": "PROSE",
+    "canonical_asset_builder.attribute_sources_neutralised.0": "PINNED",
+    "canonical_asset_builder.attribute_sources_neutralised.1": "PINNED",
+    "canonical_asset_builder.attribute_sources_neutralised.2": "PINNED",
+    "canonical_asset_builder.attribute_sources_neutralised.3": "PINNED",
+    "canonical_asset_builder.attribute_sources_neutralised.4": "PINNED",
+    "canonical_asset_builder.attribute_sources_neutralised.5": "PINNED",
+    "canonical_asset_builder.attribute_sources_neutralised.6": "PINNED",
+    "canonical_asset_builder.transactional": "PROSE",
+    "canonical_asset_builder.public_record_redaction": "PROSE",
+    "canonical_asset_builder.determinism_boundary": "PROSE",
+    "canonical_asset_builder.target_sensitivity": "PROSE",
+    "canonical_asset_builder.environment_fixed.0": "PINNED",
+    "canonical_asset_builder.environment_fixed.1": "PINNED",
+    "canonical_asset_builder.environment_fixed.2": "PINNED",
+    "canonical_asset_builder.environment_fixed.3": "PINNED",
+    "canonical_asset_builder.environment_fixed.4": "PINNED",
+    "canonical_asset_builder.environment_fixed.5": "PINNED",
+    "canonical_asset_builder.environment_fixed.6": "PINNED",
+    "canonical_asset_builder.environment_dropped.0": "PINNED",
+    "canonical_asset_builder.environment_dropped.1": "PINNED",
+    "canonical_asset_builder.environment_dropped.2": "PINNED",
+    "canonical_asset_builder.environment_dropped.3": "PINNED",
+    "canonical_asset_builder.environment_dropped.4": "PINNED",
+    "canonical_asset_builder.environment_dropped.5": "PINNED",
+    "canonical_asset_builder.environment_dropped.6": "PINNED",
+    "canonical_asset_builder.environment_dropped.7": "PINNED",
+    "canonical_asset_builder.environment_dropped.8": "PINNED",
+    "canonical_asset_builder.environment_dropped.9": "PINNED",
+    "canonical_asset_builder.environment_dropped.10": "PINNED",
+    "canonical_asset_builder.atomic_publication": "PROSE",
+    "canonical_asset_builder.expected_digest_gate": "PROSE",
+    "canonical_asset_builder.build_record.path": "PROSE",
+    "canonical_asset_builder.build_record.schema": "PINNED",
+    "canonical_asset_builder.build_record.note": "PROSE",
+    "canonical_asset_builder.build_record.added_in_v4.0": "PINNED",
+    "canonical_asset_builder.build_record.added_in_v4.1": "PINNED",
+    "canonical_asset_builder.build_record.added_in_v4.2": "PINNED",
+    "canonical_asset_builder.build_record.added_in_v4.3": "PINNED",
+    "canonical_asset_builder.build_record.added_in_v4.4": "PINNED",
+    "canonical_asset_builder.build_record.archive_command_source": "PROSE",
+    "canonical_asset_builder.builder_source_binding": "PROSE",
+    "canonical_asset_builder.exit_codes.0": "PROSE",
+    "canonical_asset_builder.exit_codes.2": "PROSE",
+    "canonical_asset_builder.exit_codes.3": "PROSE",
+    "canonical_asset_builder.commit_point_boundary": "PROSE",
+    "canonical_asset_builder.renamed_directory_identity": "PROSE",
+    "repository_url": "PINNED",
+    "excluded_from_internal_manifest.0": "PINNED",
+    "excluded_from_internal_manifest.1": "PINNED",
+    "excluded_from_internal_manifest.2": "PINNED",
+    "excluded_from_internal_manifest.3": "PINNED",
+    "publication_attestation_generator.path": "PINNED",
+    "publication_attestation_generator.tests": "PINNED",
+    "publication_attestation_generator.output_asset": "PINNED",
+    "publication_attestation_generator.inputs.0": "PROSE_LIST_ITEM",
+    "publication_attestation_generator.inputs.1": "PROSE_LIST_ITEM",
+    "publication_attestation_generator.status_emitted": "PINNED",
+    "publication_attestation_generator.note": "PROSE",
+    "publication_attestation_generator.record_contract": "PROSE",
+    "publication_attestation_generator.release_relations": "PROSE",
+    "publication_attestation_generator.exit_codes.0": "PROSE",
+    "publication_attestation_generator.exit_codes.2": "PROSE",
+    "publication_attestation_generator.exit_codes.3": "PROSE",
+    "publication_attestation_generator.draft_asset_inventory": "PROSE",
+    "publication_attestation_generator.commit_point_boundary": "PROSE",
+    "candidate_scope_and_date.changed_paths": "PROSE",
+    "candidate_scope_and_date.candidate_date": "PROSE",
+    "candidate_scope_and_date.publication_date": "PROSE",
+    "release_engineering_remediation.date_utc": "PINNED",
+    "release_engineering_remediation.base_commit": "PINNED",
+    "release_engineering_remediation.scope": "PINNED",
+    "release_engineering_remediation.finding": "PROSE",
+    "release_engineering_remediation.merge_first_parent_pin": "PINNED",
+    "release_engineering_remediation.obsolete_pin_refused": "PINNED",
+    "release_engineering_remediation.candidate_date_note": "PROSE",
+    "release_engineering_remediation.manifest_binding.authoritative_field": "PINNED",
+    "release_engineering_remediation.manifest_binding.carrier_scope": "PINNED",
+    "release_engineering_remediation.manifest_binding.digest_text_equivalence": "PINNED",
+    "release_engineering_remediation.manifest_binding.duplicate_current_digest_fields": "PINNED",
+    "release_engineering_remediation.manifest_binding.production_gate": "PINNED",
+}
+STALE_AUDIT_MANIFEST_SHA256 = "09125bc8a0a985c93e8ce33bb91eb570146f4c0f02726f9aaf74cb39a4e9d3e6"
 
 MERGE = "a1" * 20
 TREE = "b2" * 20
 PARENT_BASE = attestation.MERGE_FIRST_PARENT
+EXPECTED_PUBLICATION_MERGE_FIRST_PARENT = "2146eba2e3cf8ac7dd873365856b58c5cee0d362"
+OBSOLETE_PRE_DATE_MERGE_FIRST_PARENT = "2adfffb7dc68f40ea52fd1ed78bc2f11a46de78b"
 PARENT_BRANCH = "d4" * 20
 BLOB_OID = "e5" * 20
 ZIP_DIGEST = "12" * 32
@@ -743,6 +922,209 @@ class TimestampRefusals(GeneratorCase):
         self.assertEqual(completed.returncode, attestation.EXIT_OK, completed.stderr)
 
 
+class StaticAuditManifestBinding(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.repo = Path(self.temp.name) / "repo"
+        shutil.copytree(
+            REPO_ROOT,
+            self.repo,
+            ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc"),
+        )
+
+    def run_release_check(self) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [sys.executable, "-B", str(self.repo / "scripts" / "check_release.py")],
+            cwd=self.repo,
+            capture_output=True,
+            text=True,
+        )
+
+    def test_the_public_audit_is_bound_to_the_current_manifest(self) -> None:
+        completed = self.run_release_check()
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+        audit = json.loads((self.repo / "PUBLICATION_AUDIT.json").read_text())
+        actual = hashlib.sha256((self.repo / "SHA256SUMS").read_bytes()).hexdigest()
+        self.assertEqual(audit["internal_manifest"]["sha256"], actual)
+
+    def test_the_stale_pre_r9_manifest_digest_is_refused(self) -> None:
+        path = self.repo / "PUBLICATION_AUDIT.json"
+        audit = json.loads(path.read_text())
+        audit["internal_manifest"]["sha256"] = STALE_AUDIT_MANIFEST_SHA256
+        path.write_text(json.dumps(audit, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        completed = self.run_release_check()
+        self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+        self.assertIn("does not match SHA256SUMS", completed.stdout)
+
+    def test_the_binding_block_names_the_single_authority(self) -> None:
+        path = self.repo / "PUBLICATION_AUDIT.json"
+        audit = json.loads(path.read_text())
+        binding = audit["release_engineering_remediation"]["manifest_binding"]
+        self.assertEqual(
+            binding,
+            {
+                "authoritative_field": "internal_manifest.sha256",
+                "carrier_scope": "all_release_paths_file_bytes_and_decoded_json_keys_and_strings",
+                "digest_text_equivalence": "case_insensitive_hex",
+                "duplicate_current_digest_fields": "forbidden",
+                "production_gate": "scripts/check_release.py",
+            },
+        )
+        binding["authoritative_field"] = "release_engineering_remediation.manifest_binding.finalized_manifest_sha256"
+        path.write_text(json.dumps(audit, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        completed = self.run_release_check()
+        self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+        self.assertIn("authoritative_field", completed.stdout)
+
+    def test_a_redundant_current_manifest_digest_is_refused(self) -> None:
+        path = self.repo / "PUBLICATION_AUDIT.json"
+        audit = json.loads(path.read_text())
+        audit["release_engineering_remediation"]["manifest_binding"][
+            "finalized_manifest_sha256"
+        ] = hashlib.sha256((self.repo / "SHA256SUMS").read_bytes()).hexdigest()
+        path.write_text(json.dumps(audit, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        completed = self.run_release_check()
+        self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+        self.assertIn("must not duplicate internal_manifest.sha256", completed.stdout)
+
+    def test_the_current_digest_under_an_unrelated_audit_field_is_refused(self) -> None:
+        path = self.repo / "PUBLICATION_AUDIT.json"
+        audit = json.loads(path.read_text())
+        current = hashlib.sha256((self.repo / "SHA256SUMS").read_bytes()).hexdigest()
+        audit["alternate_manifest_digest"] = current
+        path.write_text(json.dumps(audit, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        completed = self.run_release_check()
+        self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+        self.assertIn("manifest digest authority paths", completed.stdout)
+
+    def test_the_current_digest_in_another_release_file_is_refused(self) -> None:
+        current = hashlib.sha256((self.repo / "SHA256SUMS").read_bytes()).hexdigest()
+        path = self.repo / "CHANGELOG.md"
+        path.write_text(path.read_text() + f"\nR12 carrier control: {current}\n", encoding="utf-8")
+        completed = self.run_release_check()
+        self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+        self.assertIn("manifest digest appears outside PUBLICATION_AUDIT authority", completed.stdout)
+
+    def test_an_uppercase_copy_in_the_audit_is_refused(self) -> None:
+        path = self.repo / "PUBLICATION_AUDIT.json"
+        audit = json.loads(path.read_text())
+        current = hashlib.sha256((self.repo / "SHA256SUMS").read_bytes()).hexdigest()
+        audit["alternate_manifest_digest_upper"] = current.upper()
+        path.write_text(json.dumps(audit, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        completed = self.run_release_check()
+        self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+        self.assertIn("manifest digest authority paths", completed.stdout)
+        self.assertIn("case-insensitive byte occurrences=2", completed.stdout)
+
+    def test_a_mixed_case_copy_in_another_release_file_is_refused(self) -> None:
+        current = hashlib.sha256((self.repo / "SHA256SUMS").read_bytes()).hexdigest()
+        letter_index = 0
+        characters = []
+        for character in current:
+            if character in "abcdef":
+                characters.append(character.upper() if letter_index % 2 == 0 else character)
+                letter_index += 1
+            else:
+                characters.append(character)
+        mixed = "".join(characters)
+        self.assertNotEqual(mixed, current)
+        self.assertNotEqual(mixed, current.upper())
+        path = self.repo / "CHANGELOG.md"
+        path.write_text(path.read_text() + f"\nR13 mixed-case carrier control: {mixed}\n", encoding="utf-8")
+        completed = self.run_release_check()
+        self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+        self.assertIn("manifest digest appears outside PUBLICATION_AUDIT authority", completed.stdout)
+        self.assertIn("bytes:CHANGELOG.md:1", completed.stdout)
+
+    def test_a_dot_ds_store_carrier_is_refused(self) -> None:
+        current = hashlib.sha256((self.repo / "SHA256SUMS").read_bytes()).hexdigest()
+        (self.repo / ".DS_Store").write_bytes(current.encode("ascii"))
+        completed = self.run_release_check()
+        self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+        self.assertIn("bytes:.DS_Store:1", completed.stdout)
+
+    def test_a_case_variant_digest_in_a_release_path_is_refused(self) -> None:
+        current = hashlib.sha256((self.repo / "SHA256SUMS").read_bytes()).hexdigest()
+        (self.repo / current.upper()).write_text("R13 path carrier control\n", encoding="utf-8")
+        completed = self.run_release_check()
+        self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+        self.assertIn("manifest digest appears outside PUBLICATION_AUDIT authority", completed.stdout)
+        self.assertIn("path:", completed.stdout)
+
+    def test_a_unicode_escaped_digest_inside_a_longer_audit_string_is_refused(self) -> None:
+        path = self.repo / "PUBLICATION_AUDIT.json"
+        audit = json.loads(path.read_text())
+        current = hashlib.sha256((self.repo / "SHA256SUMS").read_bytes()).hexdigest().upper()
+        carrier = f"prefix:{current}:suffix"
+        audit["escaped_semantic_manifest_carrier"] = carrier
+        text = json.dumps(audit, ensure_ascii=True, indent=2) + "\n"
+        plain = json.dumps(carrier)
+        escaped = '"' + "".join(f"\\u{ord(character):04x}" for character in carrier) + '"'
+        self.assertIn(plain, text)
+        text = text.replace(plain, escaped, 1)
+        path.write_text(text, encoding="utf-8")
+        self.assertEqual(path.read_bytes().lower().count(current.lower().encode("ascii")), 1)
+        self.assertIn(current.lower(), json.loads(path.read_text())["escaped_semantic_manifest_carrier"].lower())
+        completed = self.run_release_check()
+        self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+        self.assertIn("manifest digest authority paths", completed.stdout)
+        self.assertIn("escaped_semantic_manifest_carrier", completed.stdout)
+
+    def test_a_unicode_escaped_digest_inside_a_longer_audit_key_is_refused(self) -> None:
+        path = self.repo / "PUBLICATION_AUDIT.json"
+        audit = json.loads(path.read_text())
+        current = hashlib.sha256((self.repo / "SHA256SUMS").read_bytes()).hexdigest().upper()
+        carrier = f"prefix_{current}_suffix"
+        audit[carrier] = "R14 escaped-key carrier control"
+        text = json.dumps(audit, ensure_ascii=True, indent=2) + "\n"
+        plain = json.dumps(carrier)
+        escaped = '"' + "".join(f"\\u{ord(character):04x}" for character in carrier) + '"'
+        self.assertIn(plain, text)
+        text = text.replace(plain, escaped, 1)
+        path.write_text(text, encoding="utf-8")
+        self.assertEqual(path.read_bytes().lower().count(current.lower().encode("ascii")), 1)
+        self.assertIn(carrier, json.loads(path.read_text()))
+        completed = self.run_release_check()
+        self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+        self.assertIn("manifest digest authority paths", completed.stdout)
+        self.assertIn("<key:", completed.stdout)
+
+    def test_an_unrelated_64_hex_value_remains_allowed(self) -> None:
+        """Control: the carrier scan matches the manifest digest, not every 64-hex string.
+
+        R14 planted the unrelated digest under a new key of PUBLICATION_AUDIT.json. R15 fixes
+        the audit's key set exactly, so an added key is refused for being unknown and could no
+        longer show what this control is about. The unrelated digest therefore goes into another
+        release file, which is the same carrier scan over file bytes.
+        """
+        current = hashlib.sha256((self.repo / "SHA256SUMS").read_bytes()).hexdigest()
+        unrelated = "0" * 64 if current != "0" * 64 else "1" * 64
+        path = self.repo / "CHANGELOG.md"
+        path.write_text(path.read_text() + f"\nUnrelated digest control: {unrelated}\n", encoding="utf-8")
+        completed = self.run_release_check()
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+
+
+
+class PublicationMergeFirstParentPin(GeneratorCase):
+    def test_the_pin_is_the_current_pre_publication_main(self) -> None:
+        self.assertEqual(
+            attestation.MERGE_FIRST_PARENT,
+            EXPECTED_PUBLICATION_MERGE_FIRST_PARENT,
+        )
+
+    def test_the_obsolete_pre_date_merge_parent_is_refused(self) -> None:
+        facts = measured()
+        facts["merge_parent_base"] = OBSOLETE_PRE_DATE_MERGE_FIRST_PARENT
+        completed, output = self.run_generator(facts)
+        self.assert_refused(
+            completed,
+            f"first parent must be {EXPECTED_PUBLICATION_MERGE_FIRST_PARENT}",
+            output,
+        )
+
+
 class ReleaseSpecificRefusals(GeneratorCase):
     def test_validator_counters_of_one_are_refused(self) -> None:
         """Measured on an earlier generator: 1/1/1 was accepted because they only had to agree."""
@@ -1324,6 +1706,1097 @@ class OutputLocation(GeneratorCase):
         self.assertEqual(completed.returncode, attestation.EXIT_REFUSED)
         self.assertIn("same file as an input", completed.stderr)
         self.assertEqual(json.loads(facts_path.read_text()), measured())
+
+
+class StaticAuditExactSchema(unittest.TestCase):
+    """PUBLICATION_AUDIT.json is validated as a whole document.
+
+    Before this, ``check_release.py`` read three blocks of the audit and treated the rest as
+    prose. Thirty-nine single-field falsifications -- the schema version, the audit type, the
+    status, the candidate base, the frozen anchor, the repository URL, the generator status,
+    every recorded count and every recorded boolean -- were accepted by the production gate and
+    by the evidence validator together, so the file could say anything about itself and still
+    ship. The cases below are those falsifications expressed against the R15 contract, plus the
+    structural ones: an unknown key, a missing key, a wrong type, a bool in an integer slot, a
+    duplicate key and a non-finite number.
+    """
+
+    REMOVED_BLOCKS = ("local_candidate_replay", "static_checks", "changes_from_v1.0.1")
+
+    TOP_LEVEL_LITERALS = {
+        "schema_version": 4,
+        "release_version": "1.0.3",
+        "audit_type": "dynamic_release_record",
+        "status": "PASS",
+        "candidate_date_utc": "2026-08-09",
+        "candidate_base_commit": "0" * 40,
+        "frozen_anchor_commit": "0" * 40,
+        "frozen_anchor_version": "v1.0.0",
+        "repository_url": "https://github.com/Driedsandwich/some-other-repository",
+    }
+
+    NESTED_LITERALS = (
+        (("internal_manifest", "policy"), "OTHER_POLICY.json"),
+        (("verification_contract", "required_python"), "3.12"),
+        (("verification_contract", "enforced_by"), "scripts/build_release_assets.py"),
+        (("dynamic_publication_attestation", "generator"), "scripts/somewhere_else.py"),
+        (("dynamic_publication_attestation", "embedded_in_source_tree"), True),
+        (("dynamic_publication_attestation", "build_record_embedded"), False),
+        (("canonical_asset_builder", "path"), "scripts/somewhere_else.py"),
+        (("canonical_asset_builder", "tests"), "tests/somewhere_else.py"),
+        (("canonical_asset_builder", "build_record", "schema"), "square-riesz-release-asset-build.v3"),
+        (("publication_attestation_generator", "path"), "scripts/somewhere_else.py"),
+        (("publication_attestation_generator", "tests"), "tests/somewhere_else.py"),
+        (("publication_attestation_generator", "status_emitted"), "PUBLISHED_AND_VERIFIED"),
+        (("release_engineering_remediation", "scope"), "Widened to the mathematical corpus."),
+        (("release_engineering_remediation", "base_commit"), "0" * 40),
+        (("release_engineering_remediation", "merge_first_parent_pin"), "0" * 40),
+        (("release_engineering_remediation", "obsolete_pin_refused"), "0" * 40),
+    )
+
+    WRONG_TYPES = (
+        (("schema_version",), "3"),
+        (("schema_version",), True),
+        (("release_version",), 102),
+        (("internal_manifest",), "not an object"),
+        (("internal_manifest", "entry_count"), True),
+        (("internal_manifest", "entry_count"), "568"),
+        (("verification_contract",), []),
+        (("verification_contract", "commands"), {}),
+        (("verification_contract", "outcomes_that_must_not_appear_here"), "none"),
+        (("dynamic_publication_attestation", "embedded_in_source_tree"), 0),
+        (("dynamic_publication_attestation", "release_assets"), []),
+        (("excluded_from_internal_manifest",), "PUBLICATION_AUDIT.json"),
+        (("canonical_asset_builder", "exit_codes"), []),
+        (("release_engineering_remediation", "manifest_binding"), "internal_manifest.sha256"),
+    )
+
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.repo = Path(self.temp.name) / "repo"
+        shutil.copytree(
+            REPO_ROOT,
+            self.repo,
+            ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc"),
+        )
+        self.audit_path = self.repo / "PUBLICATION_AUDIT.json"
+        self.original = self.audit_path.read_bytes()
+
+    def check(self) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [sys.executable, "-B", str(self.repo / "scripts" / "check_release.py")],
+            cwd=self.repo,
+            capture_output=True,
+            text=True,
+        )
+
+    def restore(self) -> None:
+        self.audit_path.write_bytes(self.original)
+
+    def load(self) -> dict:
+        return json.loads(self.audit_path.read_text(encoding="utf-8"))
+
+    def save(self, audit: dict) -> None:
+        self.audit_path.write_text(
+            json.dumps(audit, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    def place(self, audit: dict, path: tuple[str, ...], value: object) -> None:
+        node = audit
+        for part in path[:-1]:
+            node = node[part]
+        node[path[-1]] = value
+
+    def assert_refused(self, needle: str) -> str:
+        completed = self.check()
+        self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+        self.assertIn(needle, completed.stdout)
+        return completed.stdout
+
+    def test_the_unmodified_candidate_passes(self) -> None:
+        """Control: every refusal below is attributable to its own change."""
+        completed = self.check()
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+
+    def test_every_removed_measurement_block_is_refused_on_reintroduction(self) -> None:
+        values: dict[str, object] = {
+            "local_candidate_replay": {"verifiers": 88, "source_git_dirty": True},
+            "static_checks": {"unit_tests": 485},
+            "changes_from_v1.0.1": {},
+        }
+        for block in self.REMOVED_BLOCKS:
+            with self.subTest(block=block):
+                self.restore()
+                audit = self.load()
+                self.assertNotIn(block, audit)
+                audit[block] = values[block]
+                self.save(audit)
+                self.assert_refused(f"has unknown keys ['{block}']")
+
+    def test_a_removed_block_reintroduced_as_a_scalar_is_refused(self) -> None:
+        audit = self.load()
+        audit["local_candidate_replay"] = "no longer an object"
+        self.save(audit)
+        self.assert_refused("has unknown keys ['local_candidate_replay']")
+
+    def test_an_unknown_top_level_key_is_refused(self) -> None:
+        audit = self.load()
+        audit["unexpected_top_level_control"] = {"injected": True}
+        self.save(audit)
+        self.assert_refused("has unknown keys ['unexpected_top_level_control']")
+
+    def test_every_required_top_level_key_is_required(self) -> None:
+        for key in sorted(self.load()):
+            with self.subTest(field=key):
+                self.restore()
+                audit = self.load()
+                del audit[key]
+                self.save(audit)
+                self.assert_refused(f"is missing keys ['{key}']")
+
+    def test_every_normative_top_level_literal_is_pinned(self) -> None:
+        for key, wrong in self.TOP_LEVEL_LITERALS.items():
+            with self.subTest(field=key):
+                self.restore()
+                audit = self.load()
+                self.assertNotEqual(audit[key], wrong)
+                audit[key] = wrong
+                self.save(audit)
+                completed = self.check()
+                self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+                self.assertIn(key, completed.stdout)
+
+    def test_every_normative_nested_literal_is_pinned(self) -> None:
+        for path, wrong in self.NESTED_LITERALS:
+            with self.subTest(field=".".join(path)):
+                self.restore()
+                audit = self.load()
+                audit_value = audit
+                for part in path:
+                    audit_value = audit_value[part]
+                self.assertNotEqual(audit_value, wrong)
+                self.place(audit, path, wrong)
+                self.save(audit)
+                completed = self.check()
+                self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+                self.assertIn(path[-1], completed.stdout)
+
+    def test_every_wrong_type_is_refused(self) -> None:
+        for path, wrong in self.WRONG_TYPES:
+            with self.subTest(field=".".join(path), value=repr(wrong)):
+                self.restore()
+                audit = self.load()
+                self.place(audit, path, wrong)
+                self.save(audit)
+                completed = self.check()
+                self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+                self.assertIn("PUBLICATION_AUDIT schema:", completed.stdout)
+
+    def test_an_unknown_nested_key_is_refused(self) -> None:
+        audit = self.load()
+        audit["internal_manifest"]["extra_note"] = "injected"
+        self.save(audit)
+        self.assert_refused("$.internal_manifest has unknown keys ['extra_note']")
+
+    def test_a_missing_nested_key_is_refused(self) -> None:
+        audit = self.load()
+        del audit["canonical_asset_builder"]["build_record"]["schema"]
+        self.save(audit)
+        self.assert_refused("$.canonical_asset_builder.build_record is missing keys ['schema']")
+
+    def test_a_renamed_canonical_asset_is_refused(self) -> None:
+        for group in ("distribution", "auxiliary_integrity"):
+            with self.subTest(group=group):
+                self.restore()
+                audit = self.load()
+                assets = audit["dynamic_publication_attestation"]["release_assets"][group]
+                assets[0] = assets[0].replace("v1.0.2", "v1.0.3")
+                self.save(audit)
+                self.assert_refused(f"release_assets.{group}")
+
+    def test_a_duplicate_top_level_key_is_refused(self) -> None:
+        line = '  "audit_type": "static_release_candidate",\n'
+        text = self.audit_path.read_text(encoding="utf-8")
+        self.assertEqual(text.count(line), 1)
+        self.audit_path.write_text(text.replace(line, line * 2, 1), encoding="utf-8")
+        self.assert_refused("duplicate JSON key 'audit_type'")
+
+    def test_a_non_finite_number_is_refused(self) -> None:
+        text = self.audit_path.read_text(encoding="utf-8")
+        self.assertIn('"schema_version": 3', text)
+        self.audit_path.write_text(text.replace('"schema_version": 3', '"schema_version": NaN', 1),
+                                   encoding="utf-8")
+        self.assert_refused("non-finite JSON constant NaN")
+
+    def test_the_release_version_must_equal_the_version_file(self) -> None:
+        (self.repo / "VERSION").write_text("1.0.3\n", encoding="utf-8")
+        self.assert_refused("PUBLICATION_AUDIT release_version=")
+
+    def test_a_measured_count_in_the_verification_contract_is_refused(self) -> None:
+        audit = self.load()
+        audit["verification_contract"]["commands"][0]["command"] = 88
+        self.save(audit)
+        self.assert_refused("verification_contract carries no measured value")
+
+    def test_a_measured_outcome_name_in_the_verification_contract_is_refused(self) -> None:
+        audit = self.load()
+        audit["verification_contract"]["verifiers"] = "88"
+        self.save(audit)
+        self.assert_refused("is a measured outcome and must not appear in verification_contract")
+
+    def test_an_unpinned_digest_in_the_verification_contract_is_refused(self) -> None:
+        audit = self.load()
+        audit["verification_contract"]["what_this_is"] += " digest " + "a" * 64
+        self.save(audit)
+        self.assert_refused("carries digest-shaped text")
+
+    def test_dropping_a_required_command_from_the_contract_is_refused(self) -> None:
+        audit = self.load()
+        audit["verification_contract"]["commands"].pop(3)
+        self.save(audit)
+        self.assert_refused("verification_contract.commands=")
+
+    def test_rewriting_a_required_command_is_refused(self) -> None:
+        audit = self.load()
+        audit["verification_contract"]["commands"][0]["command"] = "true"
+        self.save(audit)
+        self.assert_refused("verification_contract.commands=")
+
+    def test_reordering_the_required_commands_is_refused(self) -> None:
+        audit = self.load()
+        commands = audit["verification_contract"]["commands"]
+        commands[0], commands[1] = commands[1], commands[0]
+        self.save(audit)
+        self.assert_refused("verification_contract.commands=")
+
+    def test_a_pinned_identity_in_the_verification_contract_remains_allowed(self) -> None:
+        """Control: the contract may name the fixed history the audit already pins."""
+        audit = self.load()
+        anchor = audit["frozen_anchor_commit"]
+        self.assertTrue(any(anchor in entry["command"] for entry in audit["verification_contract"]["commands"]))
+        completed = self.check()
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+
+    def test_a_timestamp_in_the_verification_contract_is_refused(self) -> None:
+        audit = self.load()
+        audit["verification_contract"]["where_the_results_live"] += " Measured 2026-08-12."
+        self.save(audit)
+        self.assert_refused("verification_contract records no measured timestamp")
+
+    def test_the_remediation_date_must_be_a_real_calendar_date(self) -> None:
+        audit = self.load()
+        audit["release_engineering_remediation"]["date_utc"] = "2026-99-99"
+        self.save(audit)
+        self.assert_refused("is not a real calendar date")
+
+    def test_the_remediation_date_may_not_precede_the_candidate_date(self) -> None:
+        audit = self.load()
+        audit["release_engineering_remediation"]["date_utc"] = "2026-08-07"
+        self.save(audit)
+        self.assert_refused("precedes candidate_date_utc")
+
+    def test_the_publication_dates_must_agree(self) -> None:
+        path = self.repo / "CITATION.cff"
+        text = path.read_text(encoding="utf-8")
+        replaced = re.sub(r'^date-released:.*$', 'date-released: "2026-08-13"', text,
+                          count=1, flags=re.MULTILINE)
+        self.assertNotEqual(replaced, text)
+        path.write_text(replaced, encoding="utf-8")
+        self.assert_refused("publication date disagrees")
+
+    def test_moving_both_publication_dates_together_remains_allowed(self) -> None:
+        """Control: the dates are compared with each other, not pinned to one day."""
+        citation = self.repo / "CITATION.cff"
+        changelog = self.repo / "CHANGELOG.md"
+        citation.write_text(
+            re.sub(r'^date-released:.*$', 'date-released: "2026-08-13"',
+                   citation.read_text(encoding="utf-8"), count=1, flags=re.MULTILINE),
+            encoding="utf-8")
+        changelog.write_text(
+            re.sub(r'^## 1\.0\.2 — .*$', '## 1.0.2 — 2026-08-13',
+                   changelog.read_text(encoding="utf-8"), count=1, flags=re.MULTILINE),
+            encoding="utf-8")
+        completed = self.check()
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+
+
+class CitationSemanticParser(unittest.TestCase):
+    """CITATION.cff refuses these injections. R17 refuses them for a different reason.
+
+    These cases were written against the R16 reader, which enumerated the top
+    level and named the offending key. R17 pins the file's bytes instead, so the
+    same injections are refused because the normalized digest moved, because the
+    date line count is not one, or because a byte outside printable ASCII and LF
+    is present. The cases and their ids are kept -- they record what was tried --
+    and the expected reasons were re-measured from the gate rather than guessed.
+    """
+
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.repo = copy_repository(Path(self.temp.name))
+        self.citation = self.repo / "CITATION.cff"
+
+    def check(self) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [sys.executable, "-B", str(self.repo / "scripts" / "check_release.py")],
+            cwd=self.repo, capture_output=True, text=True)
+
+    def assert_unmodified_passes(self) -> None:
+        completed = self.check()
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+
+    def refuse(self, body: bytes, expected: str) -> None:
+        """The injected file must change bytes and must then be refused."""
+        before = self.citation.read_bytes()
+        self.assertNotEqual(before, body, "the injection did not change CITATION.cff")
+        self.citation.write_bytes(body)
+        completed = self.check()
+        output = completed.stdout + completed.stderr
+        self.assertNotEqual(completed.returncode, 0, output)
+        self.assertIn(expected, output, output)
+
+    def append(self, text: str, expected: str) -> None:
+        self.refuse(self.citation.read_bytes() + text.encode("utf-8"), expected)
+
+    def substitute(self, old: str, new: str, expected: str) -> None:
+        body = self.citation.read_text(encoding="utf-8")
+        self.assertEqual(body.count(old), 1, f"anchor {old!r} is not unique")
+        self.refuse(body.replace(old, new).encode("utf-8"), expected)
+
+    def test_the_unmodified_citation_file_passes(self) -> None:
+        self.assert_unmodified_passes()
+
+    def test_plain_duplicate_date_released(self) -> None:
+        self.append("date-released: 2026-01-01\n", "normalized sha256")
+
+    def test_double_quoted_duplicate_date_released(self) -> None:
+        self.append('"date-released": "2026-01-01"\n', "normalized sha256")
+
+    def test_single_quoted_duplicate_date_released(self) -> None:
+        self.append("'date-released': '2026-01-01'\n", "normalized sha256")
+
+    def test_unicode_escaped_key_spelling_date_released(self) -> None:
+        self.append('"date-\\u002Dreleased": "2026-01-01"\n', "normalized sha256")
+
+    def test_yaml_merge_key_injection(self) -> None:
+        self.append("<<: *base\n", "normalized sha256")
+
+    def test_anchor_on_the_date(self) -> None:
+        self.substitute('date-released: "2026-08-12"', 'date-released: &d "2026-08-12"',
+                        "date-released lines=0")
+
+    def test_alias_injection(self) -> None:
+        self.append("other: *d\n", "normalized sha256")
+
+    def test_tag_on_the_date(self) -> None:
+        self.substitute('date-released: "2026-08-12"', 'date-released: !!str "2026-01-01"',
+                        "date-released lines=0")
+
+    def test_multiple_yaml_documents(self) -> None:
+        self.append('---\ndate-released: "2026-01-01"\n', "date-released lines=2")
+
+    def test_flow_mapping_at_the_top_level(self) -> None:
+        self.refuse(b'{date-released: "2026-01-01"}\n', "date-released lines=0")
+
+    def test_invalid_calendar_date(self) -> None:
+        self.substitute('"2026-08-12"', '"2026-02-30"', "is not a real calendar date")
+
+    def test_date_that_does_not_round_trip(self) -> None:
+        self.substitute('"2026-08-12"', '"2026-8-12"', "date-released lines=0")
+
+    def test_citation_and_changelog_disagree(self) -> None:
+        self.substitute('"2026-08-12"', '"2026-08-11"', "publication date disagrees")
+
+    def test_a_missing_date_released_is_refused(self) -> None:
+        body = self.citation.read_text(encoding="utf-8")
+        stripped = "".join(line + "\n" for line in body.split("\n")
+                           if not line.startswith("date-released:"))
+        self.refuse(stripped.encode("utf-8"), "date-released lines=0")
+
+    def test_carriage_returns_are_refused(self) -> None:
+        body = self.citation.read_text(encoding="utf-8")
+        self.refuse(body.replace("\n", "\r\n").encode("utf-8"), "outside printable ASCII and LF")
+
+
+class VerificationContractExactPin(unittest.TestCase):
+    """verification_contract carries exactly the text the gate pins, not merely strings.
+
+    Pinning the *type* of a field let a measured count come back as a sentence
+    inside it. Every field is pinned to its literal value, so a contract that
+    grew a result is a different document.
+    """
+
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.repo = copy_repository(Path(self.temp.name))
+        self.audit_path = self.repo / "PUBLICATION_AUDIT.json"
+
+    def check(self) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [sys.executable, "-B", str(self.repo / "scripts" / "check_release.py")],
+            cwd=self.repo, capture_output=True, text=True)
+
+    def mutate(self, change) -> subprocess.CompletedProcess[str]:
+        before = self.audit_path.read_bytes()
+        document = json.loads(before.decode("utf-8"))
+        change(document["verification_contract"])
+        after = (json.dumps(document, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+        self.assertNotEqual(before, after, "the mutation did not change PUBLICATION_AUDIT.json")
+        self.audit_path.write_bytes(after)
+        return self.check()
+
+    def assert_refused(self, change) -> None:
+        completed = self.mutate(change)
+        output = completed.stdout + completed.stderr
+        self.assertNotEqual(completed.returncode, 0, output)
+        self.assertIn("verification_contract", output, output)
+
+    def appended(self, sentence: str):
+        def change(contract: dict) -> None:
+            contract["what_this_is"] += " " + sentence
+        return change
+
+    def test_the_unmodified_contract_passes(self) -> None:
+        completed = self.check()
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+
+    def test_unit_test_count_in_prose(self) -> None:
+        self.assert_refused(self.appended("Measured outcome: 511 unit tests passed."))
+
+    def test_verifier_count_in_prose(self) -> None:
+        self.assert_refused(self.appended("88 of 88 verifiers certified."))
+
+    def test_slashed_count_in_prose(self) -> None:
+        self.assert_refused(self.appended("Replay came back 88/88."))
+
+    def test_zero_failed_in_prose(self) -> None:
+        self.assert_refused(self.appended("zero failed in the last run."))
+
+    def test_zero_timed_out_in_prose(self) -> None:
+        self.assert_refused(self.appended("0 timed out."))
+
+    def test_all_checks_passed_in_prose(self) -> None:
+        self.assert_refused(self.appended("all checks passed."))
+
+    def test_spelled_out_counts_in_prose(self) -> None:
+        self.assert_refused(self.appended(
+            "Five hundred and eleven unit tests passed and eighty-eight verifiers certified."))
+
+    def test_required_python_cannot_drift(self) -> None:
+        def change(contract: dict) -> None:
+            contract["required_python"] = "3.12"
+        self.assert_refused(change)
+
+    def test_enforced_by_cannot_drift(self) -> None:
+        def change(contract: dict) -> None:
+            contract["enforced_by"] = "scripts/other.py"
+        self.assert_refused(change)
+
+    def test_forbidden_outcome_list_order_is_pinned(self) -> None:
+        def change(contract: dict) -> None:
+            items = list(contract["outcomes_that_must_not_appear_here"])
+            items[0], items[1] = items[1], items[0]
+            contract["outcomes_that_must_not_appear_here"] = items
+        self.assert_refused(change)
+
+    def test_forbidden_outcome_list_cannot_lose_an_item(self) -> None:
+        def change(contract: dict) -> None:
+            contract["outcomes_that_must_not_appear_here"] = \
+                contract["outcomes_that_must_not_appear_here"][:-1]
+        self.assert_refused(change)
+
+    def test_a_command_success_condition_cannot_drift(self) -> None:
+        def change(contract: dict) -> None:
+            contract["commands"][0]["success"] = "exit 0"
+        self.assert_refused(change)
+
+
+class ManifestBindingSchemaAlone(unittest.TestCase):
+    """AUDIT_SCHEMA refuses all five manifest_binding falsifications by itself.
+
+    The audit claimed two layers guarded these values. Only one did: the schema
+    declared them ``TEXT`` and the field-by-field comparison carried the whole
+    boundary. Both layers now read one constant, and this class measures the
+    schema with the other layer removed.
+    """
+
+    FIELDS = ("authoritative_field", "carrier_scope", "digest_text_equivalence",
+              "duplicate_current_digest_fields", "production_gate")
+
+    #: The block this class takes out. Deleting the matching lines instead left a
+    #: `for` with no body, and every case then failed on an IndentationError --
+    #: which is indistinguishable from the schema refusing the value.
+    OTHER_LAYER = (
+        "    if set(binding)!=set(BINDING_VALUES):issues.append("
+        "f'PUBLICATION_AUDIT manifest_binding keys={sorted(binding)!r} "
+        "expected={sorted(BINDING_VALUES)!r}')\n"
+        "    for field,expected in BINDING_VALUES.items():\n"
+        "     if binding.get(field)!=expected:issues.append("
+        "f'PUBLICATION_AUDIT manifest_binding.{field}={binding.get(field)!r} "
+        "expected={expected}')\n"
+    )
+
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.repo = copy_repository(Path(self.temp.name))
+        self.gate = self.repo / "scripts" / "check_release.py"
+        self.audit_path = self.repo / "PUBLICATION_AUDIT.json"
+
+    def remove_the_other_layer(self) -> None:
+        source = self.gate.read_text(encoding="utf-8")
+        self.assertEqual(source.count(self.OTHER_LAYER), 1,
+                         "the field-by-field comparison block is not where this test expects it")
+        patched = source.replace(self.OTHER_LAYER, "    pass\n")
+        compile(patched, "check_release.py", "exec")
+        self.gate.write_text(patched, encoding="utf-8")
+
+    def check(self) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [sys.executable, "-B", str(self.gate)],
+            cwd=self.repo, capture_output=True, text=True)
+
+    def test_removing_the_other_layer_alone_still_passes(self) -> None:
+        """The control: with the comparisons gone and nothing falsified, the gate passes.
+
+        Without this, a syntax error introduced by the removal would look
+        exactly like the schema doing its job.
+        """
+        self.remove_the_other_layer()
+        completed = self.check()
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+
+    def falsify(self, field: str) -> None:
+        self.remove_the_other_layer()
+        before = self.audit_path.read_bytes()
+        document = json.loads(before.decode("utf-8"))
+        document["release_engineering_remediation"]["manifest_binding"][field] = "FALSIFIED"
+        after = (json.dumps(document, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+        self.assertNotEqual(before, after, "the falsification did not change any bytes")
+        self.audit_path.write_bytes(after)
+        completed = self.check()
+        output = completed.stdout + completed.stderr
+        self.assertNotEqual(completed.returncode, 0, output)
+        self.assertIn(f"manifest_binding.{field}", output, output)
+
+    def test_schema_alone_refuses_authoritative_field(self) -> None:
+        self.falsify("authoritative_field")
+
+    def test_schema_alone_refuses_carrier_scope(self) -> None:
+        self.falsify("carrier_scope")
+
+    def test_schema_alone_refuses_digest_text_equivalence(self) -> None:
+        self.falsify("digest_text_equivalence")
+
+    def test_schema_alone_refuses_duplicate_current_digest_fields(self) -> None:
+        self.falsify("duplicate_current_digest_fields")
+
+    def test_schema_alone_refuses_production_gate(self) -> None:
+        self.falsify("production_gate")
+
+    def test_all_five_fields_are_covered_by_this_class(self) -> None:
+        """The list of fields here must equal the ones the gate states.
+
+        A sixth field added to the audit with no test here would otherwise be
+        pinned by the schema and never measured.
+        """
+        source = self.gate.read_text(encoding="utf-8")
+        module = ast.parse(source)
+        values = None
+        for node in module.body:
+            if isinstance(node, ast.Assign) and any(
+                    isinstance(t, ast.Name) and t.id == "BINDING_VALUES" for t in node.targets):
+                values = ast.literal_eval(node.value)
+        self.assertIsNotNone(values, "BINDING_VALUES is not a literal in check_release.py")
+        self.assertEqual(sorted(values), sorted(self.FIELDS))
+        tested = {name.split("refuses_", 1)[1] for name in dir(self)
+                  if name.startswith("test_schema_alone_refuses_")}
+        self.assertEqual(tested, set(self.FIELDS))
+
+
+class AuditClaimPolicy(unittest.TestCase):
+    """The policy names every leaf of the audit, and says what each one is for.
+
+    Reading the classification out of ``AUDIT_SCHEMA`` made the coverage report
+    agree with the gate by construction: a normative field demoted to a free-text
+    slot was reported as prose, the measurement agreed, and nothing objected. The
+    policy is written here instead, so a demotion becomes a disagreement.
+
+    The full behavioural sweep -- every leaf falsified, retyped and deleted -- is
+    carried by ``audit_claim_coverage.py`` in the external evidence, because it
+    runs the gate 480 times. The cases below are the structural properties plus
+    one named leaf from each pinned block; nothing here is sampled silently.
+    """
+
+    CLASSES = ("PINNED", "RECOMPUTED", "PROSE", "PROSE_LIST_ITEM")
+    #: A value with no whitespace is a token, an identifier or a setting -- not a
+    #: sentence -- and may not be filed under a class whose wording is free.
+    MACHINE_READABLE = re.compile(r"^[A-Za-z0-9_.\-/=:+*]+$")
+    #: One leaf per pinned block, exercised against the live gate here.
+    REPRESENTATIVES = (
+        "verification_contract.enforced_by",
+        "release_engineering_remediation.manifest_binding.authoritative_field",
+        "canonical_asset_builder.environment_fixed.0",
+        "canonical_asset_builder.build_record.added_in_v4.0",
+        "excluded_from_internal_manifest.0",
+        "dynamic_publication_attestation.release_assets.distribution.0",
+    )
+
+    @staticmethod
+    def leaves(node, path=()):
+        out = []
+        if isinstance(node, dict):
+            for key, value in node.items():
+                out.extend(AuditClaimPolicy.leaves(value, path + (key,)))
+        elif isinstance(node, list):
+            for index, value in enumerate(node):
+                out.extend(AuditClaimPolicy.leaves(value, path + (index,)))
+        else:
+            out.append((".".join(str(p) for p in path), node))
+        return out
+
+    def setUp(self) -> None:
+        self.document = json.loads((REPO_ROOT / "PUBLICATION_AUDIT.json").read_text(encoding="utf-8"))
+        self.pairs = self.leaves(self.document)
+
+    def test_policy_names_every_leaf_and_only_those(self) -> None:
+        actual = {path for path, _value in self.pairs}
+        declared = set(EXPECTED_CLAIM_CLASSIFICATION)
+        self.assertEqual(sorted(actual - declared), [], "leaves with no policy entry")
+        self.assertEqual(sorted(declared - actual), [], "policy entries naming no leaf")
+
+    def test_every_class_is_one_of_the_four(self) -> None:
+        unknown = sorted({v for v in EXPECTED_CLAIM_CLASSIFICATION.values()
+                          if v not in self.CLASSES})
+        self.assertEqual(unknown, [])
+
+    def test_no_machine_readable_value_is_classified_as_prose(self) -> None:
+        offenders = []
+        for path, value in self.pairs:
+            declared = EXPECTED_CLAIM_CLASSIFICATION[path]
+            if declared not in ("PROSE", "PROSE_LIST_ITEM"):
+                continue
+            machine = (isinstance(value, bool) or isinstance(value, (int, float))
+                       or (isinstance(value, str) and self.MACHINE_READABLE.fullmatch(value)))
+            if machine:
+                offenders.append((path, declared, value))
+        self.assertEqual(offenders, [], "machine-readable values filed as prose")
+
+    def test_the_policy_is_a_literal_and_not_read_from_the_gate(self) -> None:
+        """The point of the policy is that it is not the schema restated."""
+        source = (REPO_ROOT / "tests/test_publication_attestation.py").read_text(encoding="utf-8")
+        module = ast.parse(source)
+        found = None
+        for node in module.body:
+            if isinstance(node, ast.Assign) and any(
+                    isinstance(t, ast.Name) and t.id == "EXPECTED_CLAIM_CLASSIFICATION"
+                    for t in node.targets):
+                found = node
+        self.assertIsNotNone(found, "the policy is not a module-level assignment")
+        ast.literal_eval(found.value)
+        gate = (REPO_ROOT / "scripts/check_release.py").read_text(encoding="utf-8")
+        self.assertNotIn("EXPECTED_CLAIM_CLASSIFICATION", gate,
+                         "the gate must not import or restate the policy")
+
+    def test_each_pinned_block_has_a_representative_that_the_gate_refuses(self) -> None:
+        for path in self.REPRESENTATIVES:
+            with self.subTest(leaf=path):
+                self.assertEqual(EXPECTED_CLAIM_CLASSIFICATION[path], "PINNED")
+                temp = tempfile.TemporaryDirectory()
+                self.addCleanup(temp.cleanup)
+                repo = copy_repository(Path(temp.name))
+                target = repo / "PUBLICATION_AUDIT.json"
+                before = target.read_bytes()
+                document = json.loads(before.decode("utf-8"))
+                node = document
+                parts = path.split(".")
+                for part in parts[:-1]:
+                    node = node[int(part)] if part.isdigit() else node[part]
+                last = parts[-1]
+                key = int(last) if last.isdigit() else last
+                node[key] = node[key] + "_FALSIFIED" if isinstance(node[key], str) else "FALSIFIED"
+                after = (json.dumps(document, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+                self.assertNotEqual(before, after, "the falsification changed nothing")
+                target.write_bytes(after)
+                completed = subprocess.run(
+                    [sys.executable, "-B", str(repo / "scripts" / "check_release.py")],
+                    cwd=repo, capture_output=True, text=True)
+                self.assertNotEqual(completed.returncode, 0,
+                                    completed.stdout + completed.stderr)
+
+
+class CitationCanonicalByteProfile(unittest.TestCase):
+    """CITATION.cff is pinned as bytes, so a reader and the gate cannot disagree.
+
+    R16 enumerated the top level and refused anything that was not a plain,
+    unique, unadorned key. That is still a reader splitting on LF, and U+0085,
+    U+2028 and U+2029 end a line for a YAML parser without being LF: a comment
+    could carry a second `date-released` that a real reader honours and the gate
+    never saw. A broken nested flow collection slipped through for the same
+    reason -- only column-zero entries were being looked at.
+
+    Every byte outside printable ASCII and LF is now refused, and the file with
+    its date line replaced by a placeholder must hash to one known value. A byte
+    changed in an author, the title or the abstract is a different file.
+    """
+
+    NORMALIZED_SHA256 = "acd920368815629ef8fdb7cc65148f657e4cc476047a6a0b97715d017aba16f3"
+
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.repo = copy_repository(Path(self.temp.name))
+        self.citation = self.repo / "CITATION.cff"
+        self.changelog = self.repo / "CHANGELOG.md"
+        self.original = self.citation.read_bytes()
+
+    def check(self) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [sys.executable, "-B", str(self.repo / "scripts" / "check_release.py")],
+            cwd=self.repo, capture_output=True, text=True)
+
+    def assert_accepted(self) -> None:
+        completed = self.check()
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+
+    def refuse(self, body: bytes, expected: str) -> None:
+        """The variant must differ in bytes, and must then be refused by name."""
+        self.assertNotEqual(self.original, body, "the variant changed no bytes")
+        self.citation.write_bytes(body)
+        completed = self.check()
+        output = completed.stdout + completed.stderr
+        self.assertNotEqual(completed.returncode, 0, output)
+        self.assertIn(expected, output, output)
+
+    def append(self, text: str, expected: str) -> None:
+        self.refuse(self.original + text.encode("utf-8"), expected)
+
+    def substitute(self, old: str, new: str, expected: str) -> None:
+        text = self.original.decode("utf-8")
+        self.assertEqual(text.count(old), 1, f"anchor {old!r} is not unique")
+        self.refuse(text.replace(old, new).encode("utf-8"), expected)
+
+    # ---- the file as it stands ----------------------------------------------
+
+    def test_the_current_citation_file_is_accepted(self) -> None:
+        self.assert_accepted()
+
+    def test_the_normalized_form_hashes_to_the_pinned_value(self) -> None:
+        import re as _re
+        normalized = _re.sub(rb'^date-released: "(\d{4}-\d{2}-\d{2})"$',
+                             b'date-released: "<PUBLICATION_DATE>"',
+                             self.original, flags=_re.M)
+        self.assertEqual(hashlib.sha256(normalized).hexdigest(), self.NORMALIZED_SHA256)
+        self.assertNotEqual(hashlib.sha256(self.original).hexdigest(), self.NORMALIZED_SHA256,
+                            "the placeholder substitution changed nothing")
+
+    # ---- the three Unicode line terminators ---------------------------------
+
+    def test_next_line_u0085_hiding_a_second_date(self) -> None:
+        self.append('\n# harmless\u0085date-released: "2026-01-01"\n',
+                    "outside printable ASCII and LF")
+
+    def test_line_separator_u2028_hiding_a_second_date(self) -> None:
+        self.append('\n# harmless\u2028date-released: "2026-01-01"\n',
+                    "outside printable ASCII and LF")
+
+    def test_paragraph_separator_u2029_hiding_a_second_date(self) -> None:
+        self.append('\n# harmless\u2029date-released: "2026-01-01"\n',
+                    "outside printable ASCII and LF")
+
+    # ---- structure a line-based reader never looked at -----------------------
+
+    def test_unterminated_nested_flow_collection(self) -> None:
+        self.substitute('  - family-names: "Kishimoto"', "  - family-names: [unterminated",
+                        "normalized sha256")
+
+    def test_one_byte_changed_in_an_author_name(self) -> None:
+        self.substitute('family-names: "Kishimoto"', 'family-names: "Kishimoyo"',
+                        "normalized sha256")
+
+    def test_one_byte_changed_in_the_title(self) -> None:
+        self.substitute("Certified lower bounds", "Certified lower bound5",
+                        "normalized sha256")
+
+    def test_one_byte_changed_in_the_abstract(self) -> None:
+        self.substitute("Exact-rational branch-and-bound", "Exact-rational branch-and-bounds",
+                        "normalized sha256")
+
+    # ---- bytes that must not appear at all ----------------------------------
+
+    def test_nul_inside_a_comment(self) -> None:
+        self.append("\n# harmless\x00\n", "outside printable ASCII and LF")
+
+    def test_utf8_bom(self) -> None:
+        self.refuse(b"\xef\xbb\xbf" + self.original, "UTF-8 BOM")
+
+    def test_carriage_returns(self) -> None:
+        self.refuse(self.original.replace(b"\n", b"\r\n"), "outside printable ASCII and LF")
+
+    def test_a_tab(self) -> None:
+        self.append("\n#\tharmless\n", "outside printable ASCII and LF")
+
+    def test_non_ascii_in_a_nested_value(self) -> None:
+        self.substitute('given-names: "Satoshi"', 'given-names: "Satoshí"',
+                        "outside printable ASCII and LF")
+
+    def test_missing_final_newline(self) -> None:
+        self.refuse(self.original.rstrip(b"\n"), "does not end with a newline")
+
+    # ---- the date line itself ------------------------------------------------
+
+    def test_block_scalar_date(self) -> None:
+        self.substitute('date-released: "2026-08-12"', "date-released: >-\n  2026-08-12",
+                        "date-released lines=0")
+
+    def test_inline_comment_after_the_date(self) -> None:
+        self.substitute('date-released: "2026-08-12"',
+                        'date-released: "2026-08-12" # published',
+                        "date-released lines=0")
+
+    def test_quoted_key_duplicate_date(self) -> None:
+        self.append('"date-released": "2026-01-01"\n', "normalized sha256")
+
+    def test_plain_duplicate_date_line(self) -> None:
+        self.append('date-released: "2026-01-01"\n', "date-released lines=2")
+
+    def test_the_date_line_removed(self) -> None:
+        text = self.original.decode("utf-8")
+        stripped = "".join(line + "\n" for line in text.split("\n")
+                           if not line.startswith("date-released:"))
+        self.refuse(stripped.encode("utf-8"), "date-released lines=0")
+
+    def test_an_impossible_calendar_date(self) -> None:
+        self.substitute('date-released: "2026-08-12"', 'date-released: "2026-02-30"',
+                        "is not a real calendar date")
+
+    def test_a_date_that_does_not_round_trip(self) -> None:
+        self.substitute('date-released: "2026-08-12"', 'date-released: "2026-8-12"',
+                        "date-released lines=0")
+
+    # ---- the relation with the changelog -------------------------------------
+
+    def test_a_new_date_on_both_sides_is_accepted(self) -> None:
+        """The date is the one thing that legitimately moves at publication."""
+        self.citation.write_bytes(
+            self.original.replace(b'date-released: "2026-08-12"',
+                                  b'date-released: "2026-09-01"'))
+        text = self.changelog.read_text(encoding="utf-8")
+        self.assertEqual(text.count("## 1.0.2 — 2026-08-12"), 1)
+        self.changelog.write_text(text.replace("## 1.0.2 — 2026-08-12",
+                                               "## 1.0.2 — 2026-09-01"), encoding="utf-8")
+        self.assert_accepted()
+
+    def test_a_new_date_on_one_side_only_is_refused(self) -> None:
+        self.substitute('date-released: "2026-08-12"', 'date-released: "2026-09-01"',
+                        "publication date disagrees")
+
+
+class VersionedHistories(unittest.TestCase):
+    """The CFF profile and the verification contract are versioned, not frozen.
+
+    A single pinned constant makes the only enforceable rule "never change this",
+    which is a freeze. Each version now records the digest it replaced and why,
+    so a change can be a migration and a rewrite of an existing entry cannot
+    pretend to be one. Nothing here stops a rewrite of an entry and the thing it
+    fixes together -- the auditing party holds the digest of the version in force
+    for that -- but a history that no longer describes how this file came to be
+    is refused.
+    """
+
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.repo = copy_repository(Path(self.temp.name))
+        self.gate = self.repo / "scripts" / "check_release.py"
+        self.original = self.gate.read_text(encoding="utf-8")
+
+    def check(self) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [sys.executable, "-B", str(self.gate)],
+            cwd=self.repo, capture_output=True, text=True)
+
+    def substitute(self, old: str, new: str, expected: str) -> None:
+        """Change one literal, prove the source still compiles, then require refusal.
+
+        Compiling first matters: a mutation that breaks the syntax is refused for
+        a reason that has nothing to do with the rule under test, and counting it
+        as a refusal is how a control stops being a control.
+        """
+        self.assertEqual(self.original.count(old), 1, f"anchor {old!r} is not unique")
+        mutated = self.original.replace(old, new, 1)
+        self.assertNotEqual(self.original, mutated, "the variant changed no bytes")
+        compile(mutated, str(self.gate), "exec")
+        self.gate.write_text(mutated, encoding="utf-8")
+        completed = self.check()
+        output = completed.stdout + completed.stderr
+        self.assertNotEqual(completed.returncode, 0, output)
+        self.assertIn(expected, output, output)
+
+    def test_the_untouched_repository_is_accepted(self) -> None:
+        completed = self.check()
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+
+    def test_the_pinned_cff_digest_has_exactly_one_carrier(self) -> None:
+        """The property, not the spelling.
+
+        Asserting the exact right-hand side pinned how the derivation was
+        written, so changing `[...]` to `.get(...)` -- which was needed so a
+        missing version is reported instead of raising -- broke a test that had
+        nothing to say about the property. What matters is that the digest is
+        written once and that the name derives from the history.
+        """
+        history = re.search(r"'normalized_sha256':'(?P<digest>[0-9a-f]{64})'", self.original)
+        self.assertIsNotNone(history, "the profile history states no digest")
+        self.assertEqual(self.original.count(history.group("digest")), 1,
+                         "two equal carriers is how the R11 duplicate stayed invisible")
+        assignment = re.search(r"^CFF_NORMALIZED_SHA256\s*=\s*(?P<rhs>.+)$",
+                               self.original, re.M)
+        self.assertIsNotNone(assignment, "the pin is not assigned at column zero")
+        self.assertNotRegex(assignment.group("rhs"), r"[0-9a-f]{64}",
+                            "the pin restates the digest instead of deriving it")
+        self.assertIn("CFF_PROFILE_MIGRATIONS", assignment.group("rhs"),
+                      "the pin does not come from the profile history")
+
+    def test_the_required_commands_are_derived_from_the_contract(self) -> None:
+        assignment = re.search(r"^REQUIRED_COMMANDS\s*=\s*(?P<rhs>.+)$", self.original, re.M)
+        self.assertIsNotNone(assignment, "REQUIRED_COMMANDS is not assigned at column zero")
+        self.assertIn("CONTRACT_COMMANDS", assignment.group("rhs"),
+                      "the command list would be stated twice")
+
+    def test_a_cff_profile_chain_that_does_not_link_is_refused(self) -> None:
+        self.substitute("'previous_normalized_sha256':None,",
+                        "'previous_normalized_sha256':'" + "0" * 64 + "',",
+                        "does not chain")
+
+    def test_a_cff_profile_entry_without_a_reason_is_refused(self) -> None:
+        self.substitute(
+            "'reason':'initial byte profile: printable ASCII and LF only, exactly one "
+            "date-released line, whole-file digest with the date placeheld'",
+            "'reason':''", "records no reason")
+
+    def test_a_cff_profile_version_with_no_entry_is_refused(self) -> None:
+        self.substitute("CFF_PROFILE_VERSION='1'", "CFF_PROFILE_VERSION='2'",
+                        "has no entry in CFF_PROFILE_MIGRATIONS")
+
+    def test_a_contract_chain_that_does_not_link_is_refused(self) -> None:
+        self.substitute("'previous_commands_sha256':None,",
+                        "'previous_commands_sha256':'" + "0" * 64 + "',",
+                        "does not chain")
+
+    def test_a_contract_entry_without_a_reason_is_refused(self) -> None:
+        self.substitute(
+            "'reason':'initial verification contract: twelve commands recorded with "
+            "their success conditions and no measured outcome'",
+            "'reason':''", "records no reason")
+
+    def test_a_contract_command_count_that_disagrees_is_refused(self) -> None:
+        self.substitute("'command_count':12,", "'command_count':11,",
+                        "command_count=12 expected=11")
+
+
+class MachineReadableDiagnostics(unittest.TestCase):
+    """A complaint says which check objected and which path it was about.
+
+    R17 printed prose. Replacing one line's wording with a generic sentence left
+    the gate still exiting non-zero while nothing downstream could tell which
+    field had been falsified, and the controls that were supposed to notice
+    matched on the last component of a path found anywhere in the text -- so
+    `$.status` and `$.a.b.status` were the same claim.
+    """
+
+    #: The path is JSON-quoted in the output. A reader that stops at the first
+    #: closing bracket truncates $['changes_from_v1.0.1'] to something that
+    #: still looks like a path, which is how nine controls lost their subject.
+    STRUCTURED = re.compile(
+        r'\[check_id=(?P<check_id>[^\s\]]+)\s+'
+        r'subject_path=(?P<subject_path>"(?:[^"\\\\]|\\\\.)*")\]')
+
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.repo = copy_repository(Path(self.temp.name))
+        self.audit = self.repo / "PUBLICATION_AUDIT.json"
+        self.original = json.loads(self.audit.read_text(encoding="utf-8"))
+
+    def run_gate(self, document) -> str:
+        self.audit.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n",
+                              encoding="utf-8")
+        completed = subprocess.run(
+            [sys.executable, "-B", str(self.repo / "scripts" / "check_release.py")],
+            cwd=self.repo, capture_output=True, text=True)
+        self.assertNotEqual(completed.returncode, 0, "the falsification was not refused")
+        return completed.stdout + completed.stderr
+
+    def subjects(self, output: str) -> set[str]:
+        return {json.loads(m.group("subject_path"))
+                for m in self.STRUCTURED.finditer(output)}
+
+    def test_a_falsified_scalar_names_its_full_path(self) -> None:
+        document = copy.deepcopy(self.original)
+        document["status"] = "PASS"
+        output = self.run_gate(document)
+        self.assertIn("check_id=audit.schema.value", output)
+        self.assertIn("$.status", self.subjects(output))
+
+    def test_a_deleted_key_names_the_key_and_not_its_parent(self) -> None:
+        document = copy.deepcopy(self.original)
+        del document["schema_version"]
+        output = self.run_gate(document)
+        self.assertIn("$.schema_version", self.subjects(output))
+        self.assertNotIn("$", self.subjects(output) - {"$.schema_version"})
+
+    def test_an_added_key_names_the_key_and_not_its_parent(self) -> None:
+        document = copy.deepcopy(self.original)
+        document["unexpected_top_level_control"] = {"injected": True}
+        output = self.run_gate(document)
+        self.assertIn("$.unexpected_top_level_control", self.subjects(output))
+
+    def test_a_nested_falsification_names_the_whole_path(self) -> None:
+        document = copy.deepcopy(self.original)
+        document["internal_manifest"]["extra_note"] = "injected"
+        output = self.run_gate(document)
+        self.assertIn("$.internal_manifest.extra_note", self.subjects(output))
+
+    def test_the_prose_half_of_a_complaint_is_unchanged(self) -> None:
+        document = copy.deepcopy(self.original)
+        del document["schema_version"]
+        output = self.run_gate(document)
+        self.assertIn("is missing keys ['schema_version']", output)
+
+    def test_a_key_containing_a_bracket_survives_the_round_trip(self) -> None:
+        """The regression for the reader that stopped at the first ']'.
+
+        `changes_from_v1.0.1` is not an identifier, so its path is rendered
+        `$['changes_from_v1.0.1']` -- and a subject_path read up to the first
+        closing bracket becomes `$['changes_from_v1.0.1'`, which is not equal to
+        anything a control expects. Nine of the thirty-nine lost their subject
+        that way, while still refusing and still looking attributed.
+        """
+        document = copy.deepcopy(self.original)
+        document["changes_from_v1.0.1"] = {"reintroduced": True}
+        output = self.run_gate(document)
+        self.assertIn("$['changes_from_v1.0.1']", self.subjects(output))
+
+    def test_a_check_outside_the_schema_walk_still_names_its_subject(self) -> None:
+        """release_version is compared against VERSION, not against the schema.
+
+        It had no machine-readable half at all, so the control that falsified it
+        was refused with nothing to attribute the refusal to.
+        """
+        document = copy.deepcopy(self.original)
+        document["release_version"] = "9.9.9"
+        output = self.run_gate(document)
+        self.assertIn("$.release_version", self.subjects(output))
+
+    def test_an_untouched_document_emits_no_diagnostics(self) -> None:
+        completed = subprocess.run(
+            [sys.executable, "-B", str(self.repo / "scripts" / "check_release.py")],
+            cwd=self.repo, capture_output=True, text=True)
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+        self.assertEqual(self.subjects(completed.stdout + completed.stderr), set())
 
 
 if __name__ == "__main__":

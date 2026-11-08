@@ -799,13 +799,33 @@ class ReleaseDocumentWording(unittest.TestCase):
             with self.subTest(field=absent):
                 self.assertNotIn(absent, audit)
 
-    def test_publication_audit_labels_its_replay_as_local_and_dirty(self) -> None:
+    def test_publication_audit_separates_static_contract_from_execution_evidence(self) -> None:
         audit = json.loads((REPO_ROOT / "PUBLICATION_AUDIT.json").read_text(encoding="utf-8"))
-        replay = audit["local_candidate_replay"]
-        self.assertTrue(replay["source_git_dirty"])
-        self.assertEqual(replay["verifiers"], 88)
-        self.assertNotIn("source_git_clean", replay)
-        self.assertIn("must not be presented as the release replay", replay["note"])
+        for removed in ("local_candidate_replay", "static_checks", "changes_from_v1.0.1"):
+            with self.subTest(block=removed):
+                self.assertNotIn(removed, audit)
+        contract = audit["verification_contract"]
+        self.assertIsInstance(contract, dict)
+        named = ("source_git_commit", "source_git_dirty", "source_git_clean", "verifiers",
+                 "certified", "failed", "timed_out", "validator_problems", "unit_tests",
+                 "python_version", "run_id", "artifact_id", "release_id", "asset_id",
+                 "sha256", "digest", "timestamp", "entry_count")
+        measured: list[str] = []
+
+        def walk(node: object, path: str) -> None:
+            if isinstance(node, dict):
+                for key, value in node.items():
+                    if key in named:
+                        measured.append(f"{path}.{key}")
+                    walk(value, f"{path}.{key}")
+            elif isinstance(node, list):
+                for index, value in enumerate(node):
+                    walk(value, f"{path}[{index}]")
+            elif not isinstance(node, str):
+                measured.append(f"{path}={node!r}")
+
+        walk(contract, "verification_contract")
+        self.assertEqual(measured, [], "verification_contract carries an execution outcome")
 
     def test_publication_audit_states_the_determinism_boundary_includes_the_timezone(self) -> None:
         audit = json.loads((REPO_ROOT / "PUBLICATION_AUDIT.json").read_text(encoding="utf-8"))
