@@ -523,12 +523,32 @@ class AttestationPathScanReadsEveryDepth(unittest.TestCase):
             with self.subTest(document=document):
                 self.assertTrue(self.scan(document))
 
+    # The pattern used to require an ASCII character after the slash, so these
+    # passed both scanners (found by the November 2026 review of the v1.0.2
+    # rebuild).
+    NON_ASCII_AND_UNUSUAL_PATHS = (
+        {"platform": "/秘密"},
+        {"platform": "/ space"},
+        {"path": "//server/share"},
+        {"note": "built in /ビルド/x"},
+        {"path": "\\\\サーバ\\share"},
+        {"record": {"tail": ["root=/ñ/work"]}},
+    )
+
+    def test_non_ascii_and_unusual_paths_are_refused_by_both_scanners(self) -> None:
+        for document in self.NON_ASCII_AND_UNUSUAL_PATHS:
+            with self.subTest(document=document):
+                self.assertTrue(self.scan(document))
+                self.assertTrue(builder.find_absolute_paths(document))
+
     def test_ordinary_values_pass(self) -> None:
         document = {"url": "https://github.com/Driedsandwich/square-riesz-polarization-certificates",
                     "argv": ["git", "-c", "core.attributesFile=/dev/null", "--output=<OUTPUT_ZIP>"],
                     "tail": ["certified_rows=44 certifier_dirs=44 replay=88/88 issues=0"],
+                    "ratio": "88 / 88 and a/b",
                     "ref": "refs/tags/v1.0.2"}
         self.assertFalse(self.scan(document))
+        self.assertEqual(builder.find_absolute_paths(document), [])
 
     def test_builder_and_attestation_share_one_pattern(self) -> None:
         self.assertEqual(attestation.LOCAL_PATH.pattern, builder.LOCAL_PATH.pattern)

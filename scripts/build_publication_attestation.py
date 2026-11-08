@@ -135,12 +135,15 @@ SECRET = re.compile(
 # A local filesystem path anywhere inside a string, not only at its start: a
 # POSIX absolute path (but not the "//" of a URL or the "/" inside "a/b" or
 # "88/88"), a home-relative path, a Windows drive path with either slash, or a
-# UNC path. The scan used to look only at top-level values, and only for
+# UNC path, in either slash. A value that begins with "/" is a path whatever
+# follows it, and the character after a slash may be any non-space character,
+# so a non-ASCII directory name is found; the pattern used to require an
+# ASCII character there. The scan used to look only at top-level values, and only for
 # "/Users/", "/home/" and a doubled backslash, so a path nested in the build
 # record, or written "C:\Users", passed. build_release_assets.py carries the
 # same pattern, and a test keeps the two identical.
 LOCAL_PATH = re.compile(
-    r"(?<![A-Za-z0-9._~:/\\-])(?:/(?!/)[A-Za-z0-9._~-]|~/|[A-Za-z]:[\\/]|\\\\[A-Za-z0-9._-])")
+    r"\A/|(?<![A-Za-z0-9._~:/\\-])(?:/{1,2}[^\s/\\]|~/|[A-Za-z]:[\\/]|\\\\[^\s\\])")
 # The pinned archive command names the null device; that is not a local path.
 NULL_DEVICE_STRINGS = ("/dev/null", "core.attributesFile=/dev/null")
 

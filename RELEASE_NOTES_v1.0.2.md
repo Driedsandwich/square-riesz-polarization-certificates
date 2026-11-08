@@ -74,6 +74,17 @@ correction above, because they are defects of different kinds.
 - Every upper witness point is checked to lie in the unit square.
 - Replay output is re-derived from its own files, including per-record script
   digests and recomputed aggregates.
+- Verification gates found weak by two independent reviews in October 2026
+  were closed, merged at `4a8eb084eafb099952b3b9efb799e1208e74302e`: the
+  release check inspects every stored replay record, `--expect-all` requires
+  all 88 verifiers to certify, the proof counters must describe one bisection
+  tree, the asset builder requires both archive self-checks, and the
+  local-path checks of the builder and the publication attestation read every
+  key and value at every depth. The review of this release then extended
+  those local-path checks to paths with non-ASCII names, to `//server/share`
+  and to any value that begins with `/`. The frozen certifiers are unchanged;
+  three findings that would require changing them are recorded as proposals
+  in `docs/certifier-change-proposals.md`.
 
 `CHANGELOG.md` carries the itemised list.
 

@@ -35,9 +35,11 @@ Resolve it against the GitHub Release page or API, not against this file.
 - The `v1.0.0` and `v1.0.1` tags, Releases and assets are unchanged by
   `v1.0.2`.
 
-The corrections carried by `v1.0.2` are implemented on `main` at merge commit
-`2adfffb7dc68f40ea52fd1ed78bc2f11a46de78b`; `docs/errata-v1.0.1.md` describes
-them.
+The arithmetic and provenance corrections carried by `v1.0.2` are implemented
+on `main` at merge commit `2adfffb7dc68f40ea52fd1ed78bc2f11a46de78b`;
+`docs/errata-v1.0.1.md` describes them. The verification-gate fixes that
+`v1.0.2` also carries were merged at
+`4a8eb084eafb099952b3b9efb799e1208e74302e`; `CHANGELOG.md` itemises them.
 
 ## The v1.0.1 Release
 

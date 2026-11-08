@@ -224,6 +224,9 @@ TREE = "b2" * 20
 PARENT_BASE = attestation.MERGE_FIRST_PARENT
 EXPECTED_PUBLICATION_MERGE_FIRST_PARENT = "4a8eb084eafb099952b3b9efb799e1208e74302e"
 OBSOLETE_PRE_DATE_MERGE_FIRST_PARENT = "2adfffb7dc68f40ea52fd1ed78bc2f11a46de78b"
+# The August 2026 candidate pinned the release-prep merge; once the gate fixes
+# were merged on top of it, that is no longer the release merge's first parent.
+OBSOLETE_RELEASE_PREP_MERGE_FIRST_PARENT = "2146eba2e3cf8ac7dd873365856b58c5cee0d362"
 PARENT_BRANCH = "d4" * 20
 BLOB_OID = "e5" * 20
 ZIP_DIGEST = "12" * 32
@@ -1117,6 +1120,16 @@ class PublicationMergeFirstParentPin(GeneratorCase):
     def test_the_obsolete_pre_date_merge_parent_is_refused(self) -> None:
         facts = measured()
         facts["merge_parent_base"] = OBSOLETE_PRE_DATE_MERGE_FIRST_PARENT
+        completed, output = self.run_generator(facts)
+        self.assert_refused(
+            completed,
+            f"first parent must be {EXPECTED_PUBLICATION_MERGE_FIRST_PARENT}",
+            output,
+        )
+
+    def test_the_obsolete_release_prep_merge_parent_is_refused(self) -> None:
+        facts = measured()
+        facts["merge_parent_base"] = OBSOLETE_RELEASE_PREP_MERGE_FIRST_PARENT
         completed, output = self.run_generator(facts)
         self.assert_refused(
             completed,
