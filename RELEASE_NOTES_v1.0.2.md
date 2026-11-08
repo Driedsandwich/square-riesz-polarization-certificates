@@ -84,7 +84,8 @@ correction above, because they are defects of different kinds.
   follow one stated contract, held by a table of examples in the tests:
   http(s) URLs are never paths, and a path is anything that starts with `/`,
   `~/`, a drive, `\\` or an option glued to one of those at the start of a
-  value or after a separator, including non-ASCII names and `file:` URLs.
+  value or after a separator, including non-ASCII names, `file:` URLs and
+  response files (`@/...`).
   The frozen certifiers are unchanged; three findings that would require
   changing them are recorded as proposals in
   `docs/certifier-change-proposals.md`.

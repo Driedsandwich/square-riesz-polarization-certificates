@@ -134,26 +134,31 @@ SECRET = re.compile(
     r"-----BEGIN [A-Z ]*PRIVATE KEY-----)")
 # The local-path contract, shared word for word with build_release_assets.py
 # (a test keeps the patterns identical and the two scanners in agreement):
-# http(s) URLs are removed first and are never paths. In what is left, a
-# path is a value that begins with "/", or anything that starts with "/",
-# "//", "///", "~/", a drive ("C:\\" or "C:/"), "\\\\" or an option glued to
-# one of those ("-I/x", "-IC:\\x") at the start of the text or just after a
-# space, "=", ":", ",", ";", a quote, a bracket, "<", ">" or "|"; "=/" and
-# ":/" followed by a space or the end count too. A slash inside a word, a
-# relative path ("a/b", "88/88") or a URL is not a path. A path inside the
-# query of an http(s) URL is not looked for. Earlier patterns listed the
-# characters that may not precede a slash and kept missing spellings
-# (non-ASCII names, "file:" URLs, option-glued paths) found by three
-# November 2026 reviews of the v1.0.2 rebuild.
-HTTP_URL = re.compile(r"(?i)\bhttps?://\S*")
+# http(s) URLs are removed first (up to a space, a quote, "<", ">" or "|")
+# and are never paths. In what is left, a path is a value that begins with
+# "/", or anything that starts with one or more slashes followed by a
+# non-space character, "~/", a drive ("C:\\" or "C:/"), "\\\\" or an option
+# glued to "/", "~/", a drive or "\\\\" ("-I/x", "-I~/x", "-IC:\\x"), when
+# it stands at the start of the text or just after a space, "=", ":", ",",
+# ";", a quote, an opening bracket, "<", ">", "|" or "@" (a response file,
+# "@/x"). A lone "/" counts at the end of the text, or after "=" or ":"
+# when a space follows; a lone "/" with more text after a space is not looked
+# for, because "88 / 88" reads the same way and a lone "/" names no place on
+# a machine. A slash inside a word, a relative path ("a/b", "88/88") or a URL
+# is not a path, and a path inside the query of an http(s) URL is not looked
+# for. Earlier patterns listed the characters that may not precede a slash and
+# kept missing spellings (non-ASCII names, "file:" URLs, option-glued paths,
+# response files) found by four November 2026 reviews of the v1.0.2 rebuild.
+HTTP_URL = re.compile(r"(?i)\bhttps?://[^\s\"'<>|]*")
 LOCAL_PATH = re.compile(
     r"\A/"
-    r"|(?:\A|(?<=[\s=:,;'\"(\[{<>|]))"
-    r"(?:/{1,3}[^\s/\\]"
+    r"|(?:\A|(?<=[\s=:,;'\"(\[{<>|@]))"
+    r"(?:/+[^\s/\\]"
+    r"|/\Z"
     r"|~/"
     r"|[A-Za-z]:[\\/]"
     r"|\\\\[^\s\\]"
-    r"|-{1,2}[A-Za-z][A-Za-z0-9_-]*(?:/|[A-Za-z]:[\\/]|\\\\))"
+    r"|-{1,2}[A-Za-z][A-Za-z0-9_-]*(?:/|~/|[A-Za-z]:[\\/]|\\\\))"
     r"|(?<=[=:])/(?:\s|\Z)")
 
 

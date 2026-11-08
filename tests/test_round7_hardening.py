@@ -562,7 +562,7 @@ class AttestationPathScanReadsEveryDepth(unittest.TestCase):
         self.assertEqual(attestation.LOCAL_PATH.pattern, builder.LOCAL_PATH.pattern)
         self.assertEqual(attestation.HTTP_URL.pattern, builder.HTTP_URL.pattern)
 
-    # The local-path contract as a table (see LOCAL_PATH). Three November 2026
+    # The local-path contract as a table (see LOCAL_PATH). Four November 2026
     # reviews of the v1.0.2 rebuild each found spellings that a pattern listing
     # the characters that may not precede a slash missed or refused wrongly.
     PATHS = (
@@ -577,6 +577,9 @@ class AttestationPathScanReadsEveryDepth(unittest.TestCase):
         "xhttps://example/home",
         # A value that begins with "/" is a path by contract, whatever follows.
         "/-build/results",
+        "ld @/home/someone/linker.rsp", "cd /", "test -d ////home/someone",
+        "cc -I~/include", "url=\"https://example.org\";root=/tmp/build",
+        "url='https://example.org'|/tmp/b",
     )
     NOT_PATHS = (
         "https://github.com/Driedsandwich/square-riesz-polarization-certificates",
@@ -591,7 +594,9 @@ class AttestationPathScanReadsEveryDepth(unittest.TestCase):
         "Linux-6.8.0-x86_64-with-glibc2.39", "ubuntu-latest",
         "git@github.com:Driedsandwich/x.git", "sha256:abc",
         "expected=570 listed=570 missing=0", "version=1.0.2", "2026-11-08T00:33:32Z",
-        "x-y/z", "a (b)/c",
+        "x-y/z", "a (b)/c", "noreply@users.noreply.github.com",
+        # A lone "/" followed by more text names no place and reads like this.
+        "a / b and c", "see https://example.org/a?x=1&y=2 for details",
     )
 
     def test_the_contract_table_holds_for_both_scanners(self) -> None:
