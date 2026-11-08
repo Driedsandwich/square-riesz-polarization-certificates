@@ -132,26 +132,36 @@ SECRET = re.compile(
     r"(?i)(gh[pousr]_[A-Za-z0-9]{16,}|github_pat_[A-Za-z0-9_]{20,}|"
     r"\bauthorization\s*:|\bbearer\s+[A-Za-z0-9._\-]{10,}|\bAKIA[0-9A-Z]{16}\b|"
     r"-----BEGIN [A-Z ]*PRIVATE KEY-----)")
-# A local filesystem path anywhere inside a string, not only at its start: a
-# POSIX absolute path (but not the "//" of a URL or the "/" inside "a/b" or
-# "88/88"), a home-relative path, a Windows drive path with either slash, or a
-# UNC path, in either slash. A value that begins with "/" is a path whatever
-# follows it; a slash may be followed by any non-space character but must
-# not follow a word character in any script, so a non-ASCII directory name is
-# found and the path of a non-ASCII http(s) URL is not. A path glued to an
-# option ("-I/x"), a path after a colon that is not an http(s) URL
-# ("file:///x", "build:/x") and "=/ " are found as well; the pattern used to
-# require an ASCII character after the slash and missed all of these. The
-# scan used to look only at top-level values, and only for
-# "/Users/", "/home/" and a doubled backslash, so a path nested in the build
-# record, or written "C:\Users", passed. build_release_assets.py carries the
-# same pattern, and a test keeps the two identical.
+# The local-path contract, shared word for word with build_release_assets.py
+# (a test keeps the patterns identical and the two scanners in agreement):
+# http(s) URLs are removed first and are never paths. In what is left, a
+# path is a value that begins with "/", or anything that starts with "/",
+# "//", "///", "~/", a drive ("C:\\" or "C:/"), "\\\\" or an option glued to
+# one of those ("-I/x", "-IC:\\x") at the start of the text or just after a
+# space, "=", ":", ",", ";", a quote, a bracket, "<", ">" or "|"; "=/" and
+# ":/" followed by a space or the end count too. A slash inside a word, a
+# relative path ("a/b", "88/88") or a URL is not a path. A path inside the
+# query of an http(s) URL is not looked for. Earlier patterns listed the
+# characters that may not precede a slash and kept missing spellings
+# (non-ASCII names, "file:" URLs, option-glued paths) found by three
+# November 2026 reviews of the v1.0.2 rebuild.
+HTTP_URL = re.compile(r"(?i)\bhttps?://\S*")
 LOCAL_PATH = re.compile(
     r"\A/"
-    r"|(?<![\w.~:/\\-])(?:/{1,2}[^\s/\\]|~/|[A-Za-z]:[\\/]|\\\\[^\s\\])"
-    r"|(?<![\w.~-])-{1,2}[A-Za-z][\w-]*/"
-    r"|(?<!https)(?<!http):(?:/(?!/)|///)"
-    r"|(?<==)/\s")
+    r"|(?:\A|(?<=[\s=:,;'\"(\[{<>|]))"
+    r"(?:/{1,3}[^\s/\\]"
+    r"|~/"
+    r"|[A-Za-z]:[\\/]"
+    r"|\\\\[^\s\\]"
+    r"|-{1,2}[A-Za-z][A-Za-z0-9_-]*(?:/|[A-Za-z]:[\\/]|\\\\))"
+    r"|(?<=[=:])/(?:\s|\Z)")
+
+
+def contains_local_path(text: str) -> bool:
+    """True if a local path begins anywhere in ``text`` outside an http(s) URL."""
+    return LOCAL_PATH.search(HTTP_URL.sub(" ", text)) is not None
+
+
 # The pinned archive command names the null device; that is not a local path.
 NULL_DEVICE_STRINGS = ("/dev/null", "core.attributesFile=/dev/null")
 
@@ -719,7 +729,7 @@ def local_paths(value, where: str = "$") -> list[str]:
     elif isinstance(value, list):
         for index, item in enumerate(value):
             found += local_paths(item, f"{where}[{index}]")
-    elif isinstance(value, str) and value not in NULL_DEVICE_STRINGS and LOCAL_PATH.search(value):
+    elif isinstance(value, str) and value not in NULL_DEVICE_STRINGS and contains_local_path(value):
         found.append(f"{where}={value!r}")
     return found
 

@@ -83,23 +83,36 @@ ARCHIVE_CHECKS = ("verify_manifest.py", "check_release.py")
 # directory, and anything else it chose to print, into the build record.
 SELF_CHECK_SUMMARY = re.compile(
     r"\A[a-z_]+=[0-9]+(?:[./][0-9]+)*(?: [a-z_]+=[0-9]+(?:[./][0-9]+)*)*\Z")
-# A local filesystem path anywhere inside a string; see find_absolute_paths.
-# A value that begins with "/" is a path whatever follows it. Inside a string
-# a path begins at one or two slashes or a doubled backslash followed by any
-# non-space character, unless a word character (in any script), ".", "~",
-# ":", "/", "\\" or "-" comes just before it: that keeps "88/88", "a/b" and
-# the path part of an http(s) URL, including a non-ASCII one, out. A path
-# glued to an option ("-I/x"), a path after a colon that is not an http(s)
-# URL ("file:///x", "build:/x") and "=/ " are paths too. The pattern used to
-# require an ASCII character after the slash and missed all of these.
-# build_publication_attestation.py carries the same pattern, and a test keeps
-# the two identical.
+# The local-path contract, shared word for word with build_publication_attestation.py
+# (a test keeps the patterns identical and the two scanners in agreement):
+# http(s) URLs are removed first and are never paths. In what is left, a
+# path is a value that begins with "/", or anything that starts with "/",
+# "//", "///", "~/", a drive ("C:\\" or "C:/"), "\\\\" or an option glued to
+# one of those ("-I/x", "-IC:\\x") at the start of the text or just after a
+# space, "=", ":", ",", ";", a quote, a bracket, "<", ">" or "|"; "=/" and
+# ":/" followed by a space or the end count too. A slash inside a word, a
+# relative path ("a/b", "88/88") or a URL is not a path. A path inside the
+# query of an http(s) URL is not looked for. Earlier patterns listed the
+# characters that may not precede a slash and kept missing spellings
+# (non-ASCII names, "file:" URLs, option-glued paths) found by three
+# November 2026 reviews of the v1.0.2 rebuild.
+HTTP_URL = re.compile(r"(?i)\bhttps?://\S*")
 LOCAL_PATH = re.compile(
     r"\A/"
-    r"|(?<![\w.~:/\\-])(?:/{1,2}[^\s/\\]|~/|[A-Za-z]:[\\/]|\\\\[^\s\\])"
-    r"|(?<![\w.~-])-{1,2}[A-Za-z][\w-]*/"
-    r"|(?<!https)(?<!http):(?:/(?!/)|///)"
-    r"|(?<==)/\s")
+    r"|(?:\A|(?<=[\s=:,;'\"(\[{<>|]))"
+    r"(?:/{1,3}[^\s/\\]"
+    r"|~/"
+    r"|[A-Za-z]:[\\/]"
+    r"|\\\\[^\s\\]"
+    r"|-{1,2}[A-Za-z][A-Za-z0-9_-]*(?:/|[A-Za-z]:[\\/]|\\\\))"
+    r"|(?<=[=:])/(?:\s|\Z)")
+
+
+def contains_local_path(text: str) -> bool:
+    """True if a local path begins anywhere in ``text`` outside an http(s) URL."""
+    return LOCAL_PATH.search(HTTP_URL.sub(" ", text)) is not None
+
+
 HEX40 = re.compile(r"\A[0-9a-f]{40}\Z")
 HEX64 = re.compile(r"\A[0-9a-f]{64}\Z")
 SEMVER = re.compile(r"\A[0-9]+\.[0-9]+\.[0-9]+\Z")
@@ -770,9 +783,8 @@ def find_absolute_paths(value, path: str = "") -> list[str]:
     """Every key or string value, at any depth, that contains a local path.
 
     This used to look only at the start of each value, so "root=/tmp/x" and a
-    path after a space passed. LOCAL_PATH finds a POSIX absolute path anywhere
-    a path can begin (not the "//" of a URL, not the "/" in "88/88"), a home-
-    relative path, a Windows drive path with either slash, and a UNC path.
+    path after a space passed. contains_local_path applies the local-path
+    contract stated next to LOCAL_PATH.
     """
     found: list[str] = []
     if isinstance(value, dict):
@@ -785,7 +797,7 @@ def find_absolute_paths(value, path: str = "") -> list[str]:
     elif isinstance(value, str):
         if value == os.devnull or value == f"core.attributesFile={os.devnull}":
             return found
-        if LOCAL_PATH.search(value):
+        if contains_local_path(value):
             found.append(f"{path}={value}")
     return found
 

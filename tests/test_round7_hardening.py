@@ -560,6 +560,56 @@ class AttestationPathScanReadsEveryDepth(unittest.TestCase):
 
     def test_builder_and_attestation_share_one_pattern(self) -> None:
         self.assertEqual(attestation.LOCAL_PATH.pattern, builder.LOCAL_PATH.pattern)
+        self.assertEqual(attestation.HTTP_URL.pattern, builder.HTTP_URL.pattern)
+
+    # The local-path contract as a table (see LOCAL_PATH). Three November 2026
+    # reviews of the v1.0.2 rebuild each found spellings that a pattern listing
+    # the characters that may not precede a slash missed or refused wrongly.
+    PATHS = (
+        "/\u79d8\u5bc6", "/ space", "//server/share", "built in /\u30d3\u30eb\u30c9",
+        "\\\\\u30b5\u30fc\u30d0\\share", "root=/\u00f1", "x /\u00f1", "/home/x", "root=/tmp/a",
+        "C:\\Users\\x", "C:/Users/x", "\\\\srv\\s", "~/x", "--output=/tmp/x",
+        "-I/home/someone/include", "file:///home/someone/build",
+        "build:/home/someone/build", "root=/ private/build",
+        "file://localhost/home/someone/build", "cc -IC:\\Users\\someone\\include",
+        "smb://server/share", "note: /Users/a", "\"/var/x\"", "(/opt/x)", "path=/",
+        "x=~/a", "see /private/var/folders/xx/T/build", "--include=/x",
+        "xhttps://example/home",
+        # A value that begins with "/" is a path by contract, whatever follows.
+        "/-build/results",
+    )
+    NOT_PATHS = (
+        "https://github.com/Driedsandwich/square-riesz-polarization-certificates",
+        "https://example.org/\u8cc7\u6599/\u7d50\u679c", "http://example.org/a/b",
+        "https://example.org/releases/(stable)/checks", "HTTPS://EXAMPLE.ORG/A/B",
+        "see (https://example.org/a/b).", "cafe\u0301/results", "88/88", "a/b",
+        "88 / 88 and a/b", "replay=88/88",
+        "certified_rows=44 certifier_dirs=44 replay=88/88 issues=0", "refs/tags/v1.0.2",
+        "--output=<OUTPUT_ZIP>", "--prefix=square-riesz-polarization-certificates-v1.0.2/",
+        "--format=zip", "git", "-c", "a well-known/b", "\u8cc7\u6599/\u7d50\u679c", "12:00/1",
+        "3.13.18 (main, Jun  1 2026, 00:00:00) [GCC 13.3.0]",
+        "Linux-6.8.0-x86_64-with-glibc2.39", "ubuntu-latest",
+        "git@github.com:Driedsandwich/x.git", "sha256:abc",
+        "expected=570 listed=570 missing=0", "version=1.0.2", "2026-11-08T00:33:32Z",
+        "x-y/z", "a (b)/c",
+    )
+
+    def test_the_contract_table_holds_for_both_scanners(self) -> None:
+        for text in self.PATHS:
+            with self.subTest(path=text):
+                self.assertTrue(attestation.local_paths({"v": text}))
+                self.assertTrue(builder.find_absolute_paths({"v": text}))
+        for text in self.NOT_PATHS:
+            with self.subTest(not_path=text):
+                self.assertEqual(attestation.local_paths({"v": text}), [])
+                self.assertEqual(builder.find_absolute_paths({"v": text}), [])
+
+    def test_the_two_scanners_agree_on_every_example(self) -> None:
+        for text in self.PATHS + self.NOT_PATHS:
+            for document in ({"v": text}, {"k": [{"deep": text}]}, {text: 1}):
+                with self.subTest(document=document):
+                    self.assertEqual(bool(attestation.local_paths(document)),
+                                     bool(builder.find_absolute_paths(document)))
 
 
 # --------------------------------------------------------------------------
