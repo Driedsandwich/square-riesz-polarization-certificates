@@ -12,7 +12,7 @@
   "internal_manifest": {
     "policy": "MANIFEST_POLICY.json",
     "entry_count": 570,
-    "sha256": "b585fd9bf94120755e111997fda584de7e329080817452faa4e5535c5921bb14",
+    "sha256": "100ac8ef775c10b32f20a7b51544e64874903bf308d8a4b846e8005af7d762ae",
     "note": "This file is outside the manifest policy, so recording the manifest digest here is not circular."
   },
   "verification_contract": {

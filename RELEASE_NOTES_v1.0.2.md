@@ -80,11 +80,12 @@ correction above, because they are defects of different kinds.
   all 88 verifiers to certify, the proof counters must describe one bisection
   tree, the asset builder requires both archive self-checks, and the
   local-path checks of the builder and the publication attestation read every
-  key and value at every depth. The review of this release then extended
-  those local-path checks to paths with non-ASCII names, to `//server/share`
-  and to any value that begins with `/`. The frozen certifiers are unchanged;
-  three findings that would require changing them are recorded as proposals
-  in `docs/certifier-change-proposals.md`.
+  key and value at every depth. Reviews of this release then extended those
+  local-path checks to paths with non-ASCII names, `//server/share`, paths
+  glued to an option or written after a non-http(s) colon (`file:///...`),
+  and any value that begins with `/`, while http(s) URLs still pass. The
+  frozen certifiers are unchanged; three findings that would require changing
+  them are recorded as proposals in `docs/certifier-change-proposals.md`.
 
 `CHANGELOG.md` carries the itemised list.
 

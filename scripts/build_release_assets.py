@@ -84,15 +84,22 @@ ARCHIVE_CHECKS = ("verify_manifest.py", "check_release.py")
 SELF_CHECK_SUMMARY = re.compile(
     r"\A[a-z_]+=[0-9]+(?:[./][0-9]+)*(?: [a-z_]+=[0-9]+(?:[./][0-9]+)*)*\Z")
 # A local filesystem path anywhere inside a string; see find_absolute_paths.
-# A value that begins with "/" is a path whatever follows it. Inside a string,
-# one or two slashes or a doubled backslash followed by any non-space
-# character begin a path, so a non-ASCII directory name, a "//server/share"
-# UNC path and a UNC path with a non-ASCII server name are found; the
-# pattern used to require an ASCII character after the slash.
+# A value that begins with "/" is a path whatever follows it. Inside a string
+# a path begins at one or two slashes or a doubled backslash followed by any
+# non-space character, unless a word character (in any script), ".", "~",
+# ":", "/", "\\" or "-" comes just before it: that keeps "88/88", "a/b" and
+# the path part of an http(s) URL, including a non-ASCII one, out. A path
+# glued to an option ("-I/x"), a path after a colon that is not an http(s)
+# URL ("file:///x", "build:/x") and "=/ " are paths too. The pattern used to
+# require an ASCII character after the slash and missed all of these.
 # build_publication_attestation.py carries the same pattern, and a test keeps
 # the two identical.
 LOCAL_PATH = re.compile(
-    r"\A/|(?<![A-Za-z0-9._~:/\\-])(?:/{1,2}[^\s/\\]|~/|[A-Za-z]:[\\/]|\\\\[^\s\\])")
+    r"\A/"
+    r"|(?<![\w.~:/\\-])(?:/{1,2}[^\s/\\]|~/|[A-Za-z]:[\\/]|\\\\[^\s\\])"
+    r"|(?<![\w.~-])-{1,2}[A-Za-z][\w-]*/"
+    r"|(?<!https)(?<!http):(?:/(?!/)|///)"
+    r"|(?<==)/\s")
 HEX40 = re.compile(r"\A[0-9a-f]{40}\Z")
 HEX64 = re.compile(r"\A[0-9a-f]{64}\Z")
 SEMVER = re.compile(r"\A[0-9]+\.[0-9]+\.[0-9]+\Z")

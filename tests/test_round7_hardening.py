@@ -523,16 +523,21 @@ class AttestationPathScanReadsEveryDepth(unittest.TestCase):
             with self.subTest(document=document):
                 self.assertTrue(self.scan(document))
 
-    # The pattern used to require an ASCII character after the slash, so these
-    # passed both scanners (found by the November 2026 review of the v1.0.2
-    # rebuild).
+    # Each of these passed both scanners under an earlier pattern, which required
+    # an ASCII character after the slash and treated a colon or an option letter
+    # before it as part of a word (found by the two November 2026 reviews of the
+    # v1.0.2 rebuild).
     NON_ASCII_AND_UNUSUAL_PATHS = (
         {"platform": "/秘密"},
         {"platform": "/ space"},
         {"path": "//server/share"},
-        {"note": "built in /ビルド/x"},
+        {"note": "built in /ビルド"},
         {"path": "\\\\サーバ\\share"},
-        {"record": {"tail": ["root=/ñ/work"]}},
+        {"record": {"tail": ["root=/ñ"]}},
+        {"argv": ["cc", "-I/home/someone/include"]},
+        {"url": "file:///home/someone/build"},
+        {"note": "build:/home/someone/build"},
+        {"record": {"tail": ["root=/ private/build"]}},
     )
 
     def test_non_ascii_and_unusual_paths_are_refused_by_both_scanners(self) -> None:
@@ -546,6 +551,9 @@ class AttestationPathScanReadsEveryDepth(unittest.TestCase):
                     "argv": ["git", "-c", "core.attributesFile=/dev/null", "--output=<OUTPUT_ZIP>"],
                     "tail": ["certified_rows=44 certifier_dirs=44 replay=88/88 issues=0"],
                     "ratio": "88 / 88 and a/b",
+                    "non_ascii_url": "https://example.org/資料/結果",
+                    "relative": "資料/結果",
+                    "prefix": "--prefix=square-riesz-polarization-certificates-v1.0.2/",
                     "ref": "refs/tags/v1.0.2"}
         self.assertFalse(self.scan(document))
         self.assertEqual(builder.find_absolute_paths(document), [])
