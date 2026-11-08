@@ -71,8 +71,23 @@ PROJECT = "square-riesz-polarization-certificates"
 RECORD_NAME = "build-record.json"
 RECORD_SCHEMA = "square-riesz-release-asset-build.v4"
 BUILDER_PATH_IN_TREE = "scripts/build_release_assets.py"
-MANDATORY_ARCHIVE_CHECK = "verify_manifest.py"
+# Every self-check the archive ships must be present and must pass. Only
+# verify_manifest.py used to be mandatory: an archive without check_release.py
+# was built and its gap merely recorded, leaving the attestation as the only
+# refusal, after the ZIP already existed in the output directory.
 ARCHIVE_CHECKS = ("verify_manifest.py", "check_release.py")
+# A self-check's last line is the only output the public record keeps, so it
+# must be the counter summary these checks print ("issues=0", "replay=88/88",
+# "version=1.0.2"), not free text. A check that printed a diagnostic such as
+# "root=/tmp/release-asset-verify-.../repository" put the verification
+# directory, and anything else it chose to print, into the build record.
+SELF_CHECK_SUMMARY = re.compile(
+    r"\A[a-z_]+=[0-9]+(?:[./][0-9]+)*(?: [a-z_]+=[0-9]+(?:[./][0-9]+)*)*\Z")
+# A local filesystem path anywhere inside a string; see find_absolute_paths.
+# build_publication_attestation.py carries the same pattern, and a test keeps
+# the two identical.
+LOCAL_PATH = re.compile(
+    r"(?<![A-Za-z0-9._~:/\\-])(?:/(?!/)[A-Za-z0-9._~-]|~/|[A-Za-z]:[\\/]|\\\\[A-Za-z0-9._-])")
 HEX40 = re.compile(r"\A[0-9a-f]{40}\Z")
 HEX64 = re.compile(r"\A[0-9a-f]{64}\Z")
 SEMVER = re.compile(r"\A[0-9]+\.[0-9]+\.[0-9]+\Z")
@@ -510,22 +525,25 @@ def verify_from_archive(archive: Path, prefix: str) -> dict:
         if not root.is_dir():
             raise Refused(f"extracted archive has no {prefix} directory")
         ran: dict[str, dict] = {}
-        absent: list[str] = []
         for script in ARCHIVE_CHECKS:
             if not (root / "scripts" / script).is_file():
-                if script == MANDATORY_ARCHIVE_CHECK:
-                    raise Refused(f"extracted archive has no scripts/{script}")
-                absent.append(script)
-                continue
+                raise Refused(f"extracted archive has no scripts/{script}; every self-check "
+                              f"in {list(ARCHIVE_CHECKS)} must ship and run")
             completed = subprocess.run([sys.executable, "-B", f"scripts/{script}"],
                                        cwd=root, capture_output=True, text=True)
-            ran[script] = {"exit_code": completed.returncode,
-                           "stdout_tail": completed.stdout.strip().splitlines()[-1:]}
+            tail = completed.stdout.strip().splitlines()[-1:]
+            ran[script] = {"exit_code": completed.returncode, "stdout_tail": tail}
             if completed.returncode != 0:
                 raise Refused(f"scripts/{script} failed inside the extracted archive "
                               f"(exit {completed.returncode}): {completed.stdout.strip()} "
                               f"{completed.stderr.strip()}")
-        return {"ran": ran, "not_present_in_archive": absent}
+            if len(tail) != 1 or not SELF_CHECK_SUMMARY.fullmatch(tail[0]):
+                raise Refused(f"scripts/{script} ended its output with {tail!r}; the build "
+                              "record keeps only a counter summary such as 'issues=0', so a "
+                              "self-check must end with one")
+        # Kept in the record so its shape stays the one the attestation checks;
+        # with every check mandatory it is always empty.
+        return {"ran": ran, "not_present_in_archive": []}
 
 
 # --------------------------------------------------------------------------
@@ -737,17 +755,25 @@ def describe_published_output(output_dir: Path, record: dict, cause: BaseExcepti
 
 
 def find_absolute_paths(value, path: str = "") -> list[str]:
+    """Every key or string value, at any depth, that contains a local path.
+
+    This used to look only at the start of each value, so "root=/tmp/x" and a
+    path after a space passed. LOCAL_PATH finds a POSIX absolute path anywhere
+    a path can begin (not the "//" of a URL, not the "/" in "88/88"), a home-
+    relative path, a Windows drive path with either slash, and a UNC path.
+    """
     found: list[str] = []
     if isinstance(value, dict):
         for key, item in value.items():
+            found += find_absolute_paths(key, f"{path} (key)")
             found += find_absolute_paths(item, f"{path}.{key}")
     elif isinstance(value, list):
         for index, item in enumerate(value):
             found += find_absolute_paths(item, f"{path}[{index}]")
     elif isinstance(value, str):
-        if value == os.devnull or value.startswith("core.attributesFile="):
+        if value == os.devnull or value == f"core.attributesFile={os.devnull}":
             return found
-        if value.startswith("/") or re.match(r"\A[A-Za-z]:[\\/]", value):
+        if LOCAL_PATH.search(value):
             found.append(f"{path}={value}")
     return found
 

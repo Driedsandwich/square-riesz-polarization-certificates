@@ -82,6 +82,21 @@ treats as a packaging defect. The replay scripts refuse to run under `python -O`
 or `PYTHONOPTIMIZE`, because that would disable the `assert` statements each
 certifier uses to re-check its own certificate.
 
+**Do not run a certifier directly under `python -O` or `PYTHONOPTIMIZE`.** The
+certifiers for n=18, 20 and 22–52 search only the quarter square [0,1/2]^2;
+what extends the proof to the whole unit square is a pair of module-level
+`assert` statements checking reflection symmetry, and optimisation removes them.
+Run certifiers through `scripts/verify_one.py` or `scripts/verify_all.py`, which
+refuse optimised mode. See `docs/reproducibility.md`.
+
+**The upper witness value a certifier prints is not guaranteed to be an upper bound.** The
+`witness_value_upper_bound_decimal` line (or its equivalent) and the `upper:`
+line under `rigorous_interval_for_true_minimum` are rounded to nearest, and for
+39 of the 88 certifiers they are below the exact witness value, so the witness
+no longer certifies them as upper bounds on the true minimum. The rigorous
+upper bound is `rigorous_upper_witness` in `data/certified-results.csv`, which is
+rounded outward; see `docs/data-schema.md`.
+
 The full release replay executed all **88 verifiers** (44 configurations × 2 methods) from a freshly extracted copy of the public repository. Result: **88/88 returned code 0 and `CERTIFIED`**. See `evidence/full-cleanroom-replay/`.
 
 The releases reproduce and verify the certificates, not the original exploratory search process. Optimization/search code, random seeds, and complete search transcripts are not included in `v1.0.0`, `v1.0.1`, or `v1.0.2`. Which Release is currently canonical is resolved against GitHub, as `PUBLICATION_STATUS.md` explains.

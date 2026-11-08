@@ -432,6 +432,23 @@ def validate(
         else:
             report.count("aggregates_verified")
 
+    # Consistent aggregates only say the summary agrees with its records. A full
+    # replay that is consistent with nine successes and one failure is still not
+    # a full replay.
+    if expect_all:
+        if (
+            summary["certified_count"] != summary["verifier_count"]
+            or summary["failed_count"] != 0
+            or recomputed_certified != len(records)
+        ):
+            report.fail(
+                "--expect-all requires every verifier to be certified: "
+                f"certified_count={summary['certified_count']!r} verifier_count={summary['verifier_count']!r} "
+                f"failed_count={summary['failed_count']!r} certified_records={recomputed_certified}/{len(records)}"
+            )
+        else:
+            report.count("all_certified_verified")
+
     check_summary_csv(report, directory, seen)
 
     actual_files = {entry.name for entry in directory.iterdir() if entry.is_file()}

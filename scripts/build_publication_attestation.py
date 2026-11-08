@@ -13,6 +13,15 @@ GitHub and CI during the release, and the **machine-produced build record** from
 ``build_release_assets.py`` -- and refuses unless they agree with each other and
 with this project's fixed history.
 
+One block comes from neither file. ``mathematical_delta_from_v1_0_1`` is a
+constant of this release: what it changes relative to v1.0.1. The generator
+restates it; it is measured elsewhere, against the v1.0.1 objects. The
+anchored frozen-corpus check, the first step of both CI workflows, establishes
+that certifiers, configurations and historical evidence are byte-identical to
+v1.0.1, and ``tests/test_round7_hardening.py`` recomputes the counts and the
+unchanged lower bounds from the v1.0.1 result table, so the constant cannot
+drift from what the repository contains without a test failing.
+
 Four things this file learned the hard way.
 
 *An accepted record is not a checked record.* An earlier version required a
@@ -120,6 +129,17 @@ SECRET = re.compile(
     r"(?i)(gh[pousr]_[A-Za-z0-9]{16,}|github_pat_[A-Za-z0-9_]{20,}|"
     r"\bauthorization\s*:|\bbearer\s+[A-Za-z0-9._\-]{10,}|\bAKIA[0-9A-Z]{16}\b|"
     r"-----BEGIN [A-Z ]*PRIVATE KEY-----)")
+# A local filesystem path anywhere inside a string, not only at its start: a
+# POSIX absolute path (but not the "//" of a URL or the "/" inside "a/b" or
+# "88/88"), a home-relative path, a Windows drive path with either slash, or a
+# UNC path. The scan used to look only at top-level values, and only for
+# "/Users/", "/home/" and a doubled backslash, so a path nested in the build
+# record, or written "C:\Users", passed. build_release_assets.py carries the
+# same pattern, and a test keeps the two identical.
+LOCAL_PATH = re.compile(
+    r"(?<![A-Za-z0-9._~:/\\-])(?:/(?!/)[A-Za-z0-9._~-]|~/|[A-Za-z]:[\\/]|\\\\[A-Za-z0-9._-])")
+# The pinned archive command names the null device; that is not a local path.
+NULL_DEVICE_STRINGS = ("/dev/null", "core.attributesFile=/dev/null")
 
 EXIT_OK = 0
 EXIT_REFUSED = 2
@@ -670,11 +690,24 @@ def check_no_secrets_or_placeholders(*documents) -> None:
             raise Refused(f"input contains a placeholder: {placeholder.group(0)!r}")
         if SECRET.search(blob):
             raise Refused("input appears to contain a credential or authorization header")
-        for name, value in document.items():
-            if isinstance(value, str) and value.startswith("/") and value != os.devnull:
-                raise Refused(f"{name} looks like an absolute path: {value!r}")
-            if isinstance(value, str) and re.search(r"/Users/|/home/|C:\\\\", value):
-                raise Refused(f"{name} contains a local filesystem path")
+        found = local_paths(document)
+        if found:
+            raise Refused(f"input contains a local filesystem path at {found[0]}")
+
+
+def local_paths(value, where: str = "$") -> list[str]:
+    """Every key or string value, at any depth, that contains a local path."""
+    found: list[str] = []
+    if isinstance(value, dict):
+        for key, item in value.items():
+            found += local_paths(key, f"{where} (key)")
+            found += local_paths(item, f"{where}.{key}")
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            found += local_paths(item, f"{where}[{index}]")
+    elif isinstance(value, str) and value not in NULL_DEVICE_STRINGS and LOCAL_PATH.search(value):
+        found.append(f"{where}={value!r}")
+    return found
 
 
 def canonical_record_bytes(record: dict) -> bytes:
